@@ -2,6 +2,12 @@
 
 Aeroporto di riferimento: **Roma Ciampino (LIRA)**.
 
+## Locandina
+
+![Locandina Aeroporto del Mese — Roma Ciampino](Locandina_PM0926.png)
+
+Formato: 630 × 630 px.
+
 ## RAW HTML VaBase
 
 - [Testata generale](testata_generale.html)
