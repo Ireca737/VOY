@@ -1,0 +1,129 @@
+/* === VOY Tutorial Style - Flight Academy === */
+
+body {
+    font-family: "Lato", sans-serif;
+    background-color: #fff;
+    color: #222;
+}
+
+h1 {
+    font-size: 2.4rem;
+    color: #0f3b5c;
+    font-weight: 700;
+    text-align: center;
+    margin-top: 30px;
+    margin-bottom: 10px;
+}
+
+p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    text-align: justify;
+    margin-bottom: 15px;
+}
+
+strong {
+    color: #0f3b5c;
+}
+
+img {
+    border-radius: 8px;
+}
+
+.img-circle {
+    border-radius: 50%;
+}
+
+.img-rounded {
+    border-radius: 10px;
+}
+
+.shadow {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+h3 {
+    color: #0f3b5c;
+    font-weight: 600;
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+ul {
+    margin-left: 25px;
+    line-height: 1.6;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    margin-bottom: 25px;
+}
+
+table th, table td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: left;
+}
+
+table thead th {
+    background-color: #eaf3f9;
+    color: #0f3b5c;
+    font-weight: 600;
+}
+
+.alert {
+    border-radius: 10px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.alert-info {
+    background-color: #e8f3fc;
+    border-left: 5px solid #0f3b5c;
+}
+
+.alert-success {
+    background-color: #ebf8ef;
+    border-left: 5px solid #16a34a;
+}
+
+hr {
+    border: none;
+    height: 1px;
+    background: #ccc;
+    margin: 40px 0;
+}
+
+.text-muted {
+    color: #666 !important;
+    font-size: 0.95rem;
+}
+
+.text-end {
+    text-align: right;
+}
+
+.btn-cta-primary {
+    background-color: #0f3b5c;
+    color: #fff !important;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 10px 20px;
+    transition: all 0.3s ease;
+}
+
+.btn-cta-primary:hover {
+    background-color: #154b7a;
+    transform: scale(1.05);
+}
+
+/* figure captions */
+em {
+    display: block;
+    text-align: center;
+    color: #555;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
