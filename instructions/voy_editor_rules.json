@@ -66,7 +66,14 @@
         "”",
         "–"
       ],
-      "note": "Non convertire automaticamente apostrofi, virgolette, parentesi o lettere accentate se il RAW di riferimento le usa già correttamente."
+      "note": "Non convertire automaticamente apostrofi, virgolette, parentesi o lettere accentate se il RAW di riferimento le usa già correttamente.",
+      "heading_policy": {
+        "preferred": "Usare lettere accentate UTF-8 direttamente nei titoli <h1>-<h6>.",
+        "avoid": "Evitare entità nominate per lettere accentate nei titoli, ad esempio &agrave;.",
+        "validated_example": "<h3>&#9888;&#65039; Responsabilità del Pilota</h3>",
+        "rejected_example": "<h3>&#9888;&#65039; Responsabilit&agrave; del Pilota</h3>",
+        "evidence": "Il primo esempio è stato accettato da VaBase; il secondo ha prodotto errore 404."
+      }
     },
     "tags": {
       "confirmed_text": [
@@ -192,8 +199,17 @@
     "positive_references": [
       "voy_template_base.html",
       "tutorial_article.css",
-      "Aeroporto del Mese Jeju - maggio 2026"
+      "Aeroporto del Mese Jeju - maggio 2026",
+      "Test SkyMeeting VFR: icona numerica + accento UTF-8 nel titolo"
     ],
-    "method": "Una sintassi già pubblicata e correttamente resa costituisce evidenza positiva di compatibilità."
+    "method": "Una sintassi già pubblicata e correttamente resa costituisce evidenza positiva di compatibilità.",
+    "known_failures": [
+      {
+        "context": "Titolo <h3> in SkyMeeting VFR",
+        "syntax": "Responsabilit&agrave; del Pilota",
+        "result": "Errore 404",
+        "workaround": "Responsabilità del Pilota"
+      }
+    ]
   }
 }
