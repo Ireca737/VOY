@@ -2,8 +2,8 @@
 
 Sezione dedicata alla programmazione degli eventi **Aeroporto del mese** di VOY.
 
-Ogni appuntamento ha una propria cartella, identificata dal codice evento, contenente i materiali di preparazione e pubblicazione.
+Ogni appuntamento ha una propria cartella, identificata dal codice del volo mensile in partenza, contenente le testate RAW HTML di presentazione, partenza e ritorno.
 
 ## Eventi
 
-- **PM0926 — Ferie finite!** — [HTML](PM0926/PM0926.html) · [RAW editoriale](PM0926/RAW.md)
+- [Settembre 2026 — Roma Ciampino (LIRA)](PM0926/README.md) — `PM0926` / `AM2609`
