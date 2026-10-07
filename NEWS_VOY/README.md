@@ -26,6 +26,14 @@ database VOY / tabella voy_news
 Home / Pilot Centre
 ```
 
+## Documentazione tecnica
+
+- [Mappa struttura sito](site_structure.md)
+- [Inventario integrazioni Google Drive](drive_inventory.md)
+- [Schema database](database/voy_news.sql)
+- [Template NEWS4VOY](templates/template_news4voy.html)
+- [Template Bacheca di Compagnia](templates/template_bacheca_compagnia.html)
+
 ## Database
 
 Tabella principale:
@@ -43,8 +51,6 @@ teaser
 views
 ```
 
-Significato dei campi principali:
-
 - `news`: contenuto completo dell'articolo;
 - `teaser`: sintesi mostrata nel widget;
 - `is_public`: determina dove viene pubblicata la notizia;
@@ -61,13 +67,9 @@ is_public = 0
     → Pilot Centre
 ```
 
-La protezione dell'accesso diretto agli articoli non pubblici va mantenuta come requisito architetturale.
+La protezione dell'accesso diretto agli articoli non pubblici resta un requisito da completare/verificare.
 
 ## Pipeline editoriale
-
-Il problema storico del sito era il blocco WAF/ModSecurity dei POST contenenti HTML con attributi `style=`.
-
-NEWS VOY usa una soluzione diversa:
 
 ```text
 Editor / RAW HTML
@@ -81,31 +83,17 @@ base64_decode() lato PHP
 salvataggio del contenuto normale nel database
 ```
 
-Questo consente di usare HTML editoriale ricco e stili inline senza applicare i workaround richiesti dal vecchio editor VaBase.
+Questa pipeline evita il blocco WAF/ModSecurity dei POST contenenti HTML con attributi `style=`, che continua invece a condizionare il sistema legacy Tour ed eventi.
 
 ## Famiglie editoriali
 
 ### NEWS4VOY
 
-Rubrica editoriale dedicata a:
-
-- mondo della simulazione di volo;
-- eventi e network online;
-- simulatori e add-on;
-- hardware e home cockpit;
-- novità tecniche;
-- community;
-- vita Virtual Over Italy.
+Rubrica dedicata a simulazione di volo, eventi, network online, simulatori, add-on, hardware, home cockpit, novità tecniche, community e vita VOY.
 
 ### Bacheca di Compagnia
 
-Comunicazioni interne e operative:
-
-- avvisi;
-- reminder;
-- comunicazioni staff;
-- preparazione alle serate;
-- informazioni operative per i piloti.
+Comunicazioni interne e operative: avvisi, reminder, comunicazioni staff, preparazione alle serate e informazioni operative per i piloti.
 
 ### Evento
 
@@ -117,15 +105,9 @@ Stato: **DESIGN / NON IMPLEMENTATO**.
 
 Ogni apertura di `news_voy_item.php` incrementa `views`.
 
-Le visualizzazioni sono:
+Le visualizzazioni sono mostrate nel widget e riepilogate nell'area amministrativa.
 
-- mostrate nel widget;
-- riepilogate nella dashboard amministrativa;
-- consultabili nella pagina statistiche dedicata.
-
-## File server coinvolti
-
-Baseline funzionale:
+## File custom principali
 
 ```text
 /public_html/admin/news_voy/index.php
@@ -134,29 +116,39 @@ Baseline funzionale:
 /public_html/admin/news_voy/edit_raw.php
 /public_html/admin/news_voy/news_db.php
 /public_html/admin/news_voy/editor_voy.js
-/public_html/admin/news_voy/news_stats.php
 
 /public_html/news_voy_item.php
 /public_html/site_widgets/news_feed_voy.php
-/public_html/site_pilot_functions/pilot_centre.php
-/public_html/index.php
-/public_html/admin/index.php
-/public_html/admin/includes/sidebar.php
-/public_html/voy/secure_config/conn_voy.php
 ```
 
-Il file `conn_voy.php` è usato dal modulo ma non deve essere versionato con credenziali o dati sensibili.
+La baseline versionata è disponibile in `site_snapshot/public_html/`.
+
+## File di integrazione
+
+NEWS VOY interviene anche in file generali del sito:
+
+```text
+/public_html/index.php
+/public_html/site_pilot_functions/pilot_centre.php
+/public_html/admin/index.php
+/public_html/admin/includes/sidebar.php
+/public_html/admin/news_voy/news_stats.php
+```
+
+Per evitare di confondere codice generale del sito e codice NEWS VOY, le porzioni pertinenti sono documentate nella cartella `integrations/`.
+
+## Sicurezza
+
+`/public_html/voy/secure_config/conn_voy.php` viene usato dal modulo ma non deve essere versionato con credenziali o dati sensibili.
 
 ## Automazione eventi — direzione prevista
-
-Flusso progettuale:
 
 ```text
 Calendario eventi
       ↓
 evento tra 2 giorni
       ↓
-lettura URL dettaglio evento
+URL dettaglio evento
       ↓
 estrazione dati
       ↓
@@ -166,17 +158,12 @@ creazione automatica in voy_news
       ↓
 pubblicazione
       ↓
-ore 01:00 del giorno successivo all'evento
+01:00 del giorno successivo
       ↓
 rimozione automatica dalla Bacheca
 ```
 
-Decisione ancora aperta:
-
-- mantenere il calendario JSON esistente;
-- oppure introdurre una tabella database dedicata agli eventi.
-
-Il link della pagina evento costituisce oggi la chiave per recuperare i dati di dettaglio.
+Resta da decidere se mantenere il calendario JSON o introdurre una tabella eventi dedicata.
 
 ## Direzione futura
 
@@ -185,5 +172,3 @@ NEWS VOY è la baseline tecnologica da cui far evolvere:
 1. Tour ed eventi;
 2. VOY Tutorial;
 3. automazioni editoriali collegate al calendario.
-
-Le aree legacy non vanno forzatamente convertite finché non viene progettata e testata la migrazione.
