@@ -1,5 +1,33 @@
 # VOY Editorial — Requisiti funzionali
 
+## Manifesto — Una redazione aumentata dall'AI
+
+VOY Editorial non nasce con l'obiettivo di costruire un sistema nel quale **l'AI scrive il giornale**.
+
+Nasce per costruire una **redazione aumentata dall'intelligenza artificiale**, nella quale persone e AI collaborano mantenendo ruoli distinti e riconoscibili.
+
+L'AI osserva il mondo esterno, individua opportunità editoriali, ricerca e verifica le fonti, assiste il redattore nella produzione dei contenuti, organizza il patrimonio editoriale, ne conserva la memoria, propone possibili composizioni e, infine, confeziona tecnicamente il prodotto.
+
+Le decisioni editoriali rimangono invece umane.
+
+Il redattore decide cosa sviluppare e come raccontarlo.  
+Il comitato di redazione decide cosa pubblicare, dove pubblicarlo e quando.  
+Il Plugin rende queste decisioni più semplici da trasformare in un prodotto finito.
+
+Le **cellule editoriali** separano inoltre la produzione del contenuto dalla sua destinazione: un contenuto può nascere oggi senza che sia ancora necessario sapere se finirà nel prossimo numero, in una Bacheca, in uno speciale o in un prodotto futuro.
+
+La **Fonte Editoriale** completa questo modello osservando il mondo esterno in ottica di prodotto: non cerca semplicemente ciò che è successo, ma cerca ciò che potrebbe alimentare il patrimonio editoriale e diventare un contenuto utile alla redazione.
+
+Ne deriva un principio fondamentale:
+
+> **L'AI non sostituisce la redazione; aumenta la sua capacità di osservare, produrre, organizzare e trasformare le idee in prodotti editoriali.**
+
+VOY costituisce il primo ambiente reale nel quale sviluppare e verificare questo modello. L'architettura che ne deriva potrebbe in futuro essere applicabile anche a giornali, magazine, newsletter e altre piccole redazioni.
+
+Ma il progetto non deve essere costruito oggi pensando a un ipotetico mercato futuro.
+
+> **Prima deve funzionare bene per VOY. Se il modello è valido, la sua generalizzazione verrà dopo.**
+
 ## 1. Visione
 
 VOY Editorial deve fornire a più redattori, assistiti dall'AI, uno spazio editoriale condiviso nel quale creare, sviluppare, organizzare e revisionare liberamente contenuti indipendenti dal prodotto editoriale finale.
