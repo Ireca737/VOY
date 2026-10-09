@@ -1,6 +1,6 @@
 <?php
 /**
- * NEWS VOY — anteprima social (fase 1).
+ * VOY Social — anteprima testate (fase 2).
  * Nessuna chiamata alle API Meta e nessuna pubblicazione automatica.
  */
 require_once __DIR__ . '/../../lib/functions.php';
@@ -26,7 +26,11 @@ $teaser = trim((string)($article['teaser'] ?? ''));
 $summary = trim(preg_replace('/\s+/u', ' ', preg_replace('/^\s*[-•]\s*/mu', '', $teaser)));
 $baseUrl = rtrim(website_base_url, '/') . '/';
 $articleUrl = $baseUrl . 'news_voy_item.php?id=' . (int)$article['id'];
-$imageUrl = $baseUrl . 'images/news_voy/news4voy.png'; // Copertina iniziale NEWS4VOY; da rendere configurabile.
+// Solo NEWS4VOY usa la sua copertina; tutte le altre news usano la Bacheca.
+$isNews4Voy = strncasecmp(ltrim($title), 'NEWS4VOY', 8) === 0;
+$testata = $isNews4Voy ? 'NEWS4VOY' : 'LA BACHECA DI COMPAGNIA';
+$imageUrl = $isNews4Voy ? $baseUrl . 'images/news_voy/news4voy.png' : null;
+$logoVoyUrl = $baseUrl . 'images/Logo%20VOI.jpg';
 $facebookText = trim($title . "\n\n" . $summary . "\n\n" . $articleUrl);
 $instagramText = trim($title . "\n\n" . $summary . "\n\nArticolo completo sul sito Virtual Over Italy (link in bio).");
 function socialEsc(string $value): string {
@@ -63,8 +67,23 @@ function socialEsc(string $value): string {
                     <div class="form-text">Instagram richiede un contenuto multimediale idoneo; i link nelle didascalie non sono generalmente cliccabili.</div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Copertina proposta (da verificare)</label><br>
-                    <img src="<?php echo socialEsc($imageUrl); ?>" alt="Copertina NEWS VOY" style="max-width:420px;width:100%;height:auto" loading="lazy">
+                    <label class="form-label">Testata selezionata automaticamente: <strong><?php echo socialEsc($testata); ?></strong></label>
+                    <?php if ($isNews4Voy) { ?>
+                        <div><img src="<?php echo socialEsc($imageUrl); ?>" alt="Testata NEWS4VOY" style="max-width:420px;width:100%;height:auto" loading="lazy"></div>
+                    <?php } else { ?>
+                        <!-- Anteprima HTML della testata Bacheca; non e' ancora un'immagine social. -->
+                        <div style="padding:24px 30px 20px;border-bottom:3px solid #137eae;background:#fff;max-width:850px;">
+                            <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;">
+                                <div style="flex:0 0 auto;"><img src="<?php echo socialEsc($logoVoyUrl); ?>" alt="Virtual Over Italy" style="display:block;width:105px;height:auto;"></div>
+                                <div style="flex:1 1 420px;min-width:250px;">
+                                    <div style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#137eae;margin-bottom:6px;">Virtual Over Italy</div>
+                                    <div style="font-size:32px;line-height:1.1;font-weight:700;color:#1f2b36;">LA BACHECA DI COMPAGNIA</div>
+                                    <div style="font-size:15px;color:#6d7780;margin-top:5px;">Avvisi e comunicazioni da Virtual Over Italy</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-text">Questa e' un'anteprima HTML: prima della pubblicazione su Instagram servira' una copertina JPG/PNG.</div>
+                    <?php } ?>
                 </div>
                 <button class="btn btn-primary" type="button" disabled title="Integrazione Meta non ancora configurata">Pubblica sui social — prossimamente</button>
                 <a class="btn btn-outline-secondary ms-2" href="<?php echo socialEsc($baseUrl . 'admin/news_voy/index.php'); ?>">Torna alle news</a>
