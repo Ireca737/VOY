@@ -90,6 +90,9 @@ if (!empty($newsArticles)) {
         $article["date"] = (new DateTime($article["date"]))->format('Y-m-d');
         $article["buttons"] = '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="' . website_base_url . 'news_voy_item.php?id=' . $article["id"] . '" title="View" target="_blank"><i data-feather="eye"></i></a>';
         $article["buttons"] .= '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="' . website_base_url . 'admin/news_voy/edit.php?id=' . $article["id"] . '" title="Edit"><i data-feather="edit"></i></a>';
+        if ((int)($article["is_public"] ?? 0) === 1) {
+            $article["buttons"] .= '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="' . website_base_url . 'admin/news_voy/social.php?id=' . (int)$article["id"] . '" title="Anteprima social" aria-label="Anteprima social"><i data-feather="share-2"></i></a>';
+        }
         $article["buttons"] .= '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal" title="Delete" data-id="' . $article["id"] . '"><i data-feather="trash-2"></i></a>';
     }
 }
