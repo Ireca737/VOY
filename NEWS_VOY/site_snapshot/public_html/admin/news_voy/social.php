@@ -125,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'publi
     if ($postedCsrf === '' || !hash_equals($csrfToken, $postedCsrf)) {
         $facebookResult = ['ok' => false, 'error' => 'Sessione non valida o richiesta scaduta. Ricarica la pagina e riprova.'];
     } elseif ($postedFacebookText === '') {
-        $facebookResult = ['ok' => false, 'error' => 'Il testo Facebook non puo\\' essere vuoto.'];
+        $facebookResult = ['ok' => false, 'error' => "Il testo Facebook non puo' essere vuoto."];
     } else {
         $privateConfigFile = '/home/virtualoveritaly/voy_private/voy_social_config.php';
         if (!is_readable($privateConfigFile)) {
@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'publi
             if ($pageId === '' || $accessToken === '') {
                 $facebookResult = ['ok' => false, 'error' => 'Configurazione Meta incompleta.'];
             } elseif (!$freshArticle || (int)$freshArticle['is_public'] !== 1) {
-                $facebookResult = ['ok' => false, 'error' => 'La notizia non risulta piu\\' pubblica. Pubblicazione annullata.'];
+                $facebookResult = ['ok' => false, 'error' => "La notizia non risulta piu' pubblica. Pubblicazione annullata."];
             } else {
                 $facebookResult = voyPublishFacebook($pageId, $accessToken, $postedFacebookText);
                 $facebookText = $postedFacebookText;
