@@ -32,8 +32,8 @@ function socialEsc(string $value): string {
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-/** Facebook: flusso gia' collaudato, senza modifiche funzionali. */
-function voyPublishFacebook(string $pageId, string $systemToken, string $message): array {
+/** Facebook: pubblica la copertina social come foto, con testo e link diretto nella didascalia. */
+function voyPublishFacebook(string $pageId, string $systemToken, string $message, string $imageUrl): array {
     $accountsUrl = 'https://graph.facebook.com/v26.0/me/accounts'
         . '?fields=id,name,access_token'
         . '&access_token=' . urlencode($systemToken);
@@ -68,12 +68,17 @@ function voyPublishFacebook(string $pageId, string $systemToken, string $message
         return ['ok' => false, 'http_code' => $httpCode, 'post_id' => null,
             'error' => 'Page Access Token della Pagina Virtual Over Italy non disponibile.'];
     }
-    $publishUrl = 'https://graph.facebook.com/v26.0/' . rawurlencode($pageId) . '/feed';
+    $publishUrl = 'https://graph.facebook.com/v26.0/' . rawurlencode($pageId) . '/photos';
     $ch = curl_init();
     curl_setopt_array($ch, [
         CURLOPT_URL => $publishUrl,
         CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => http_build_query(['message' => $message, 'access_token' => $pageToken]),
+        CURLOPT_POSTFIELDS => http_build_query([
+            'url' => $imageUrl,
+            'caption' => $message,
+            'published' => 'true',
+            'access_token' => $pageToken,
+        ]),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 20,
         CURLOPT_CONNECTTIMEOUT => 10,
@@ -199,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'publi
             } elseif (!$freshArticle || (int)$freshArticle['is_public'] !== 1) {
                 $facebookResult = ['ok' => false, 'error' => "La notizia non risulta piu' pubblica. Pubblicazione annullata."];
             } else {
-                $facebookResult = voyPublishFacebook($pageId, $accessToken, $postedFacebookText);
+                $facebookResult = voyPublishFacebook($pageId, $accessToken, $postedFacebookText, $socialImageUrl);
                 $facebookText = $postedFacebookText;
             }
         }
@@ -257,7 +262,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'publi
                 <?php if (empty($instagramResult['ok'])) { ?><br><?php echo socialEsc((string)($instagramResult['error'] ?? 'Errore sconosciuto.')); ?><?php } ?>
             </div>
         <?php } ?>
-        <div class="alert alert-info">Facebook mantiene la pubblicazione gia' collaudata (testo e link). Instagram pubblica la copertina social JPG con didascalia.</div>
+        <div class="alert alert-info">Facebook pubblica copertina social JPG, testo e link diretto. Instagram pubblica la copertina social JPG con didascalia.</div>
         <div class="card mb-4">
             <div class="card-header"><?php echo socialEsc($title); ?></div>
             <div class="card-body">
