@@ -53,6 +53,10 @@ function voyNewsCreate(string $title, string $teaser, string $poster, string $ne
 {
     global $conn;
 
+    if (!in_array($isPublic, [0, 1, 2], true)) {
+        throw new InvalidArgumentException("Invalid news publication state");
+    }
+
     $stmt = $conn->prepare(
         "INSERT INTO voy_news (title, teaser, poster, news, is_public)
          VALUES (?, ?, ?, ?, ?)"
@@ -72,6 +76,10 @@ function voyNewsCreate(string $title, string $teaser, string $poster, string $ne
 function voyNewsUpdate(int $id, string $title, string $teaser, string $news, int $isPublic = 0): bool
 {
     global $conn;
+
+    if (!in_array($isPublic, [0, 1, 2], true)) {
+        throw new InvalidArgumentException("Invalid news publication state");
+    }
 
     $stmt = $conn->prepare(
         "UPDATE voy_news
