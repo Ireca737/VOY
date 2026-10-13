@@ -81,6 +81,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
+if (empty($_SESSION['voy_news_publish_csrf'])) {
+    $_SESSION['voy_news_publish_csrf'] = bin2hex(random_bytes(32));
+}
+$publishCsrf = $_SESSION['voy_news_publish_csrf'];
+
 $newsArticles = [];
 try {
     $newsArticles = voyNewsGetAll();
@@ -95,6 +100,9 @@ if (!empty($newsArticles)) {
         $article['publication_status'] = $state === 2 ? 'BOZZA' : ($state === 1 ? 'HOME + PILOT CENTRE' : 'PILOT CENTRE');
         $article["buttons"] = '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="' . website_base_url . 'admin/news_voy/preview.php?id=' . $article["id"] . '" title="View" target="_blank"><i data-feather="eye"></i></a>';
         $article["buttons"] .= '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="' . website_base_url . 'admin/news_voy/' . ((json_decode($article['news'], true)['blocks'][0]['type'] ?? '') === 'raw' ? 'edit_raw.php' : 'edit.php') . '?id=' . $article["id"] . '" title="Edit"><i data-feather="edit"></i></a>';
+        if ($state === 2) {
+            $article["buttons"] .= '<button type="button" class="btn btn-sm btn-success me-2" data-bs-toggle="modal" data-bs-target="#publishModal" data-id="' . (int)$article['id'] . '" data-title="' . htmlspecialchars($article['title'], ENT_QUOTES, 'UTF-8') . '">VISTO SI STAMPI</button>';
+        }
         $article["buttons"] .= '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal" title="Delete" data-id="' . $article["id"] . '"><i data-feather="trash-2"></i></a>';
     }
 }
@@ -213,6 +221,33 @@ if (!empty($newsArticles)) {
             </div>
         </div>
     </div>
+    <div class="modal fade" id="publishModal" tabindex="-1" aria-labelledby="publishModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="<?php echo website_base_url; ?>admin/news_voy/publish.php">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="publishModalLabel">VISTO SI STAMPI</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Confermi la pubblicazione di <strong id="publishArticleTitle"></strong>?</p>
+                        <input type="hidden" name="id" id="publishArticleId">
+                        <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($publishCsrf, ENT_QUOTES, 'UTF-8'); ?>">
+                        <label class="form-label" for="publishDestination">Destinazione</label>
+                        <select class="form-select" name="destination" id="publishDestination" required>
+                            <option value="0">Solo Pilot Centre</option>
+                            <option value="1">Home + Pilot Centre</option>
+                        </select>
+                        <p class="small text-muted mt-2">L'articolo diventerà immediatamente visibile ai destinatari selezionati.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-success">Conferma pubblicazione</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     <!-- Modal -->
     <div class="modal fade" id="deleteModal" data-bs-backdrop="static" tabindex="-1" role="dialog"
         aria-labelledby="staticBackdropLabel" aria-hidden="true">
@@ -241,6 +276,12 @@ if (!empty($newsArticles)) {
 <script type="text/javascript">
     var dataSet = <?php echo json_encode($newsArticles); ?>;
     $(window).on('load', function() {
+        $('#publishModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            $('#publishArticleId').val(button.attr('data-id'));
+            $('#publishArticleTitle').text(button.attr('data-title'));
+            $('#publishDestination').val('0');
+        });
         $('#deleteModal').on('show.bs.modal', function(event) {
             var id = $(event.relatedTarget).data('id');
             $(this).find('.btn-danger').attr("href", "?function=delete_news&id=" + id);
