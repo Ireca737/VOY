@@ -18,7 +18,7 @@ $teaser = null;
 $poster = $_SESSION['name'] ?? 'System';
 $news = null;
 $responseMessage = null;
-$isPublic = 0;
+$isPublic = 2;
 
 /*
  * Template RAW disponibili.
@@ -57,7 +57,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $title = cleanString($_POST['title']);
     $teaser = cleanString($_POST['teaser'] ?? '');
     $poster = cleanString($_POST['poster']);
-    $isPublic = isset($_POST['is_public']) ? 1 : 0;
+    $isPublic = filter_var($_POST['is_public'] ?? null, FILTER_VALIDATE_INT);
+    if (!in_array($isPublic, [0, 1, 2], true)) {
+        $isPublic = false;
+    }
     $encodedContent = $_POST['editorContentB64'] ?? '';
     $htmlContent = base64_decode($encodedContent, true);
     if ($htmlContent === false) {
@@ -71,16 +74,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         ]
     ], JSON_UNESCAPED_UNICODE);
 
-    if (empty($title) || empty($htmlContent)) {
+    if (empty($title) || empty($htmlContent) || $isPublic === false) {
         $status = "required_fields";
     } else {
         try {
             voyNewsCreate($title, $teaser, $poster, $news, $isPublic);
             $status = "success";
+            $savedAsDraft = ($isPublic === 2);
             $title = "";
             $teaser = "";
             $news = "";
-            $isPublic = 0;
+            $isPublic = 2;
         } catch (Throwable $e) {
             $status = "error";
             $responseMessage = "Database error while creating the article.";
@@ -129,7 +133,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
 
                 <?php if ($status == "success") { ?>
-                    <div class="alert alert-success alert-dismissible fade show">Article successfully published.
+                    <div class="alert alert-success alert-dismissible fade show"><?php echo !empty($savedAsDraft) ? "Bozza salvata." : "Articolo pubblicato."; ?>
                         <button class="btn-close" type="button" data-bs-dismiss="alert"></button>
                     </div>
                 <?php } elseif ($status == "error") { ?>
@@ -158,15 +162,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <div class="form-text">Testo breve dello strillone. Non modifica il contenuto dell'articolo.</div>
                     </div>
 
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="is_public" id="is_public" value="1" <?php echo $isPublic ? 'checked' : ''; ?>>
-                            <label class="form-check-label" for="is_public">
-                                Pubblica anche nella Home
-                            </label>
-                        </div>
-                        <div class="form-text">Se non selezionata, la news resta visibile solo ai piloti autenticati.</div>
-                    </div>
+                    <fieldset class="mb-3">
+                        <legend class="fs-6">Destinazione dell'articolo</legend>
+                        <?php foreach ([2 => 'BOZZA - Solo tipografia', 0 => 'PILOT CENTRE - Piloti autenticati', 1 => 'HOME + PILOT CENTRE - Pubblica per tutti'] as $value => $label) { ?>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="is_public" id="is_public_<?php echo $value; ?>" value="<?php echo $value; ?>" <?php echo $isPublic === $value ? 'checked' : ''; ?> required>
+                                <label class="form-check-label" for="is_public_<?php echo $value; ?>"><?php echo htmlspecialchars($label); ?></label>
+                            </div>
+                        <?php } ?>
+                    </fieldset>
 
                     <div class="mb-3">
                         <label class="mb-1">Article (HTML code)*</label>
@@ -184,7 +188,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                     <input type="hidden" name="poster" value="<?php echo htmlspecialchars($poster); ?>">
                     <div class="text-right">
-                        <button type="submit" class="btn btn-primary">Publish News</button>
+                        <button type="submit" class="btn btn-primary">Salva articolo</button>
                     </div>
                 </form>
             </div>
