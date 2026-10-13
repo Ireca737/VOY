@@ -103,6 +103,9 @@ if (!empty($newsArticles)) {
         if ($state === 2) {
             $article["buttons"] .= '<button type="button" class="btn btn-sm btn-success me-2" data-bs-toggle="modal" data-bs-target="#publishModal" data-id="' . (int)$article['id'] . '" data-title="' . htmlspecialchars($article['title'], ENT_QUOTES, 'UTF-8') . '">VISTO SI STAMPI</button>';
         }
+        if ($state === 1) {
+            $article["buttons"] .= '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="' . website_base_url . 'admin/news_voy/social.php?id=' . (int)$article["id"] . '" title="Anteprima social" aria-label="Anteprima social"><i data-feather="share-2"></i></a>';
+        }
         $article["buttons"] .= '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal" title="Delete" data-id="' . $article["id"] . '"><i data-feather="trash-2"></i></a>';
     }
 }
