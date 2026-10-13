@@ -31,7 +31,7 @@ $title = $data['title'] ?? '';
 $teaser = $data['teaser'] ?? '';
 $poster = $data['poster'] ?? ($_SESSION['name'] ?? 'System');
 $newsJson = $data['news'] ?? '';
-$isPublic = !empty($data['is_public']) ? 1 : 0;
+$isPublic = (int)$data['is_public'];
 $decoded = json_decode($newsJson, true);
 $htmlContent = $decoded['blocks'][0]['data']['html'] ?? $newsJson;
 
@@ -41,7 +41,10 @@ $responseMessage = null;
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $title = cleanString($_POST['title']);
     $teaser = cleanString($_POST['teaser'] ?? '');
-    $isPublic = isset($_POST['is_public']) ? 1 : 0;
+    $isPublic = filter_var($_POST['is_public'] ?? null, FILTER_VALIDATE_INT);
+    if (!in_array($isPublic, [0, 1, 2], true)) {
+        $isPublic = false;
+    }
     $encodedContent = $_POST['editorContentB64'] ?? '';
     $htmlContent = base64_decode($encodedContent, true);
     if ($htmlContent === false) {
@@ -54,7 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         ]
     ], JSON_UNESCAPED_UNICODE);
 
-    if (empty($title) || empty($htmlContent)) {
+    if (empty($title) || empty($htmlContent) || $isPublic === false) {
         $status = "required_fields";
     } else {
         try {
@@ -121,15 +124,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <div class="form-text">Testo breve dello strillone. Non modifica il contenuto dell'articolo.</div>
                     </div>
 
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="is_public" id="is_public" value="1" <?php echo $isPublic ? 'checked' : ''; ?>>
-                            <label class="form-check-label" for="is_public">
-                                Pubblica anche nella Home
-                            </label>
-                        </div>
-                        <div class="form-text">Se non selezionata, la news resta visibile solo ai piloti autenticati.</div>
-                    </div>
+                    <fieldset class="mb-3">
+                        <legend class="fs-6">Destinazione dell'articolo</legend>
+                        <?php foreach ([2 => 'BOZZA - Solo tipografia', 0 => 'PILOT CENTRE - Piloti autenticati', 1 => 'HOME + PILOT CENTRE - Pubblica per tutti'] as $value => $label) { ?>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="is_public" id="is_public_<?php echo $value; ?>" value="<?php echo $value; ?>" <?php echo $isPublic === $value ? 'checked' : ''; ?> required>
+                                <label class="form-check-label" for="is_public_<?php echo $value; ?>"><?php echo htmlspecialchars($label); ?></label>
+                            </div>
+                        <?php } ?>
+                    </fieldset>
 
                     <div class="mb-3">
                         <label class="mb-1">Article (HTML code)*</label>
