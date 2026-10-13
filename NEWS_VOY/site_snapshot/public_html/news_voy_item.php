@@ -17,7 +17,7 @@ if ($id <= 0) {
 $stmt = $conn->prepare(
     "SELECT id, title, poster, date, news
      FROM voy_news
-     WHERE id = ?"
+     WHERE id = ? AND is_public IN (0, 1)"
 );
 
 if (!$stmt) {
