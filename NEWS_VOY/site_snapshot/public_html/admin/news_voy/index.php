@@ -91,8 +91,10 @@ if (!empty($newsArticles)) {
     foreach ($newsArticles as &$article) {
 
         $article["date"] = (new DateTime($article["date"]))->format('Y-m-d');
-        $article["buttons"] = '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="' . website_base_url . 'news_voy_item.php?id=' . $article["id"] . '" title="View" target="_blank"><i data-feather="eye"></i></a>';
-        $article["buttons"] .= '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="' . website_base_url . 'admin/news_voy/edit.php?id=' . $article["id"] . '" title="Edit"><i data-feather="edit"></i></a>';
+        $state = (int)$article['is_public'];
+        $article['publication_status'] = $state === 2 ? 'BOZZA' : ($state === 1 ? 'HOME + PILOT CENTRE' : 'PILOT CENTRE');
+        $article["buttons"] = '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="' . website_base_url . 'admin/news_voy/preview.php?id=' . $article["id"] . '" title="View" target="_blank"><i data-feather="eye"></i></a>';
+        $article["buttons"] .= '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="' . website_base_url . 'admin/news_voy/' . ((json_decode($article['news'], true)['blocks'][0]['type'] ?? '') === 'raw' ? 'edit_raw.php' : 'edit.php') . '?id=' . $article["id"] . '" title="Edit"><i data-feather="edit"></i></a>';
         $article["buttons"] .= '<a class="btn btn-datatable btn-icon btn-transparent-dark me-2" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal" title="Delete" data-id="' . $article["id"] . '"><i data-feather="trash-2"></i></a>';
     }
 }
@@ -139,6 +141,7 @@ if (!empty($newsArticles)) {
                             <th>Title</strong></th>
                             <th>Author</th>
                             <th>Posted Date</th>
+                            <th>Stato</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -254,6 +257,9 @@ if (!empty($newsArticles)) {
                     },
                     {
                         data: "date",
+                    },
+                    {
+                        data: "publication_status",
                     },
                     {
                         data: "buttons",
