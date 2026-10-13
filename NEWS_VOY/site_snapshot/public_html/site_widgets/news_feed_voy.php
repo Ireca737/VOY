@@ -10,7 +10,7 @@
  *      $newsFeedPublicOnly = true;
  *      include_once 'site_widgets/news_feed.php';
  *
- * Se $newsFeedPublicOnly non viene definito, il widget mostra tutte le news.
+ * Se $newsFeedPublicOnly non viene definito, il widget mostra solo le news pubblicate (0 e 1).
  */
 
 require_once __DIR__ . '/../voy/secure_config/conn_voy.php';
@@ -25,6 +25,8 @@ $sql = "
 
 if ($newsFeedPublicOnly) {
     $sql .= " WHERE is_public = 1 ";
+} else {
+    $sql .= " WHERE is_public IN (0, 1) ";
 }
 
 $sql .= " ORDER BY date DESC, id DESC LIMIT " . (int)$newsFeedLimit;
