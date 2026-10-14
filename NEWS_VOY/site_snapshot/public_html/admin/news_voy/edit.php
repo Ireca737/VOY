@@ -149,6 +149,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             <input name="editorContentB64" type="hidden" id="editorContentB64" />
                             <button type="submit" id="submitButton" class="btn btn-primary">Save
                                 Changes</button>
+                            <?php if ($isPublic === 1) { ?>
+                                <a class="btn btn-outline-primary ms-2"
+                                   href="<?php echo htmlspecialchars(website_base_url . 'admin/news_voy/social.php?id=' . $id, ENT_QUOTES, 'UTF-8'); ?>"
+                                   title="Apri il compositore social (salva prima eventuali modifiche)">
+                                    <i data-feather="share-2"></i> Pubblica sui social
+                                </a>
+                            <?php } ?>
                         </div>
                     </div>
                 </form>
