@@ -18,6 +18,9 @@ if (!userHasPermission(11)) {
     exit();
 }
 
+// Server-side pre-production gate: block every write before API or DB access.
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') { http_response_code(403); exit('MFO in collaudo: scritture disabilitate'); }
+
 $programs = [];
 $error = null;
 try {
