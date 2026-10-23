@@ -28,6 +28,9 @@ copy($editSource,$root.'/admin/mfo/edit.php');
 $legSource=dirname(__DIR__,2).'/admin/create_leg.php';
 if (!is_file($legSource)) throw new RuntimeException('Missing MFO create_leg.php');
 copy($legSource,$root.'/admin/mfo/create_leg.php');
+$editLegSource=dirname(__DIR__,2).'/admin/edit_leg.php';
+if (!is_file($editLegSource)) throw new RuntimeException('Missing MFO edit_leg.php');
+copy($editLegSource,$root.'/admin/mfo/edit_leg.php');
 file_put_contents($root.'/lib/functions.php', <<<'PHP'
 <?php
 function validateAdminSession(): void {}
@@ -46,6 +49,15 @@ final class Api {
  public static function __constructStatic(): void {}
  public static function sendSync(string $method,string $path,$data): Reply {
   $file=__DIR__.'/../admin/mfo/mock_store.json';
+  if ($method==='GET' && preg_match('~^v1/activity/leg/(\\d+)$~',$path,$m)) {
+   $legsFile=__DIR__.'/../admin/mfo/mock_legs.json';
+   $legs=is_file($legsFile)?json_decode(file_get_contents($legsFile),true):[];
+   foreach ($legs?:[] as $leg) if ((int)$leg['id']===(int)$m[1]) {
+    $leg['description']=$leg['description']??'{"blocks":[{"type":"paragraph","data":{"text":"Tratta di prova"}}]}';
+    return new Reply(json_encode($leg));
+   }
+   throw new \RuntimeException('Mock leg not found');
+  }
   if ($method==='GET' && preg_match('~^v1/activity/(\\d+)$~',$path,$m)) {
    $rows=is_file($file)?json_decode(file_get_contents($file),true):[];
    foreach ($rows?:[] as $row) if ((int)$row['activity_id']===(int)$m[1]) {
@@ -94,10 +106,15 @@ class FakeResult {
 class FakeStatement {
  private int $id=0;
  private int $legId=0;
+ private ?string $slotStatus=null;
  public int $num_rows=0;
- public function __construct(private bool $lookup=false, private bool $slotInsert=false) {}
+ public function __construct(private bool $lookup=false, private bool $slotInsert=false, private bool $slotLookup=false) {}
  public function store_result(): void { if ($this->lookup) { $file=__DIR__.'/mock_store.json'; $rows=is_file($file)?json_decode(file_get_contents($file),true):[]; foreach($rows?:[] as $row) if ((int)$row['activity_id']===$this->id) { $this->num_rows=1; break; } } }
  public function bind_param(string $type, &$id, &$legId=null): void {
+  if ($this->slotLookup) {
+   if ($type!=='ii'||!is_int($id)||!is_int($legId)) throw new \RuntimeException('Wrong slot lookup arguments');
+   $this->legId=$id; $this->id=$legId; return;
+  }
   if ($this->slotInsert) {
    if ($type!=='ii'||$id!==900001||!is_int($legId)||$legId<910001) throw new \RuntimeException('Wrong mock slot IDs');
    $this->legId=$legId;
@@ -105,7 +122,7 @@ class FakeStatement {
   $this->id=$id;
  }
  public function execute(): bool {
-  if ($this->lookup) return true; // SELECT: store_result() reads the existing registry.
+  if ($this->lookup || $this->slotLookup) return true; // SELECT reads existing registry.
   if ($this->slotInsert) {
    $pending=__DIR__.'/mock_pending_leg.json';
    if (!is_file($pending)) throw new \RuntimeException('No pending mock leg');
@@ -132,6 +149,12 @@ class FakeStatement {
   @unlink($pending);
   return true;
  }
+ public function bind_result(&$status): void {
+  if (!$this->slotLookup) throw new \RuntimeException('Unexpected bind_result');
+  $file=__DIR__.'/mock_legs.json'; $legs=is_file($file)?json_decode(file_get_contents($file),true):[];
+  foreach ($legs?:[] as $leg) if ((int)$leg['id']===$this->legId && (int)$leg['activityId']===$this->id) { $status=$leg['status_mfo']; $this->slotStatus=$status; return; }
+ }
+ public function fetch(): bool { return $this->slotLookup && $this->slotStatus!==null; }
  public function close(): void {}
 }
 class FakeDb {
@@ -146,6 +169,7 @@ class FakeDb {
  }
  public function prepare(string $sql): FakeStatement {
   if ($sql==='SELECT id FROM voy_mfo_programs WHERE activity_id=? LIMIT 1') return new FakeStatement(true);
+  if ($sql==='SELECT status_mfo FROM voy_mfo_slots WHERE activity_leg_id=? AND activity_id=? LIMIT 1') return new FakeStatement(false,false,true);
   if (str_contains($sql,'INSERT INTO voy_mfo_slots')) return new FakeStatement(false,true);
   if (!str_contains($sql,'INSERT INTO voy_mfo_programs')) throw new \RuntimeException('Unexpected INSERT');
   return new FakeStatement();
