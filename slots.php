@@ -66,7 +66,7 @@ try {
                                 style="background-image:url(<?php echo website_base_url; ?>uploads/activities/<?php echo $activity->banner; ?>);background-color:#ccc;">
                                 <div class="activity-card-hidden">
                                     <div>
-                                        <p><a href="<?php echo website_base_url; ?>activity.php?id=<?php echo $activity->id; ?>"
+                                        <p><a href="<?php echo website_base_url; ?>slot.php?id=<?php echo $activity->id; ?>"
                                                 class="js_showloader"><?php echo $activity->title; ?></a>
                                         </p>
                                     </div>
@@ -94,7 +94,7 @@ try {
         });
         $(".activity-card-container").click(function() {
             Loader.start();
-            window.location.href = "/activity.php?id=" + $(this).data("activityid");
+            window.location.href = "/slot.php?id=" + $(this).data("activityid");
         });
     });
 </script>
