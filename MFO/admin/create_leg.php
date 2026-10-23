@@ -52,7 +52,43 @@ $blocked=!empty($_SESSION['mfo_leg_block_'.$id]);
 <div class="row"><div class="col-md-6 mb-3"><label>Numero volo</label><input class="form-control" name="flightNumber"></div><div class="col-md-6 mb-3"><label>Aeromobile ICAO</label><input class="form-control" name="aircraft"></div></div>
 <div class="mb-3"><label>Rotta</label><input class="form-control" name="route"></div>
 <div class="mb-3"><label>Registrazione aeromobile</label><input class="form-control" name="aircraftReg"></div>
-<div class="mb-3"><label>Descrizione EditorJS (JSON)</label><textarea class="form-control" name="description" rows="5" required></textarea></div>
+<div class="mb-3"><label class="form-label">Descrizione</label><div id="editorJs" class="form-control" style="min-height:180px"></div><input type="hidden" name="description" id="mfoDescription" value="<?=mfo_e($leg->description??'')?>"></div>
 <button class="btn btn-primary">Crea tratta e registra slot</button></form></div></div><?php endif; ?>
 </div></main>
 <?php include __DIR__.'/../includes/footer.php'; ?>
+
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@latest"></script>
+<script>
+(function () {
+  const holder = document.getElementById('editorJs');
+  const field = document.getElementById('mfoDescription');
+  const form = field && field.closest('form');
+  if (!holder || !field || !form) return;
+  if (typeof EditorJS === 'undefined') { holder.textContent = 'Editor non disponibile. Ricaricare la pagina.'; form.querySelector('[type=submit]').disabled = true; return; }
+  let data;
+  try { data = field.value ? JSON.parse(field.value) : undefined; } catch (_) { data = undefined; }
+  const editor = new EditorJS({holder: 'editorJs', data, tools: {
+    header: {class: Header, inlineToolbar: true},
+    list: {class: EditorjsList, inlineToolbar: true},
+    embed: Embed,
+    raw: RawTool
+  }});
+  let sending = false;
+  form.addEventListener('submit', async function (event) {
+    if (sending) return;
+    event.preventDefault();
+    try {
+      await editor.isReady;
+      const result = await editor.save();
+      if (!result.blocks || !result.blocks.length) { alert('Inserire una descrizione.'); return; }
+      field.value = JSON.stringify(result);
+      sending = true;
+      form.requestSubmit();
+    } catch (error) { alert('Impossibile salvare la descrizione: ' + error.message); }
+  });
+})();
+</script>
