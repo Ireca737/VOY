@@ -197,7 +197,7 @@ if (empty($_SESSION['mfo_create_csrf'])) {
   const field = document.getElementById('mfoDescription');
   const form = field && field.closest('form');
   if (!holder || !field || !form) return;
-  if (typeof EditorJS === 'undefined') { holder.textContent = 'Editor non disponibile. Ricaricare la pagina.'; form.querySelector('[type=submit]').disabled = true; return; }
+  if (typeof EditorJS === 'undefined' || typeof Header === 'undefined' || typeof EditorjsList === 'undefined' || typeof Embed === 'undefined' || typeof RawTool === 'undefined') { holder.textContent = 'Editor non disponibile. Ricaricare la pagina.'; form.querySelector('[type=submit]').disabled = true; return; }
   let data;
   try { data = field.value ? JSON.parse(field.value) : undefined; } catch (_) { data = undefined; }
   const editor = new EditorJS({holder: 'editorJs', data, tools: {
