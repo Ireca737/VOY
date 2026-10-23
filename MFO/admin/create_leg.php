@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reconcile_leg'])) {
    }
    if (isset($res) && $res->getStatusCode()===200) {
     try {
-     $refresh=\\Proxy\\Api\\Api::sendSync('GET','v1/activity/'.$id,null);
+     $refresh=\Proxy\Api\Api::sendSync('GET','v1/activity/'.$id,null);
      if ($refresh->getStatusCode()!==200) throw new RuntimeException('GET HTTP '.$refresh->getStatusCode());
      $updated=json_decode((string)$refresh->getBody());
      if (!$updated || !isset($updated->activityLegs) || !is_array($updated->activityLegs)) throw new RuntimeException('Elenco tratte assente');
