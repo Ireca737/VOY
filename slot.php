@@ -56,13 +56,18 @@ foreach (($activity->activityLegs ?? []) as $index => $leg) {
 usort($rows, static function ($a, $b) {
     return ($a['priority'] <=> $b['priority']) ?: ($a['order'] <=> $b['order']);
 });
+function slot_date($value): string {
+    if (empty($value)) return '—';
+    try { return (new DateTimeImmutable((string)$value, new DateTimeZone('UTC')))->format('d/m/Y'); }
+    catch (Throwable $e) { return '—'; }
+}
 ?>
 <?php include 'includes/header.php'; ?>
 <section id="content" class="cp section offset-header">
 <div class="container">
   <p><a href="<?php echo slot_e(website_base_url); ?>slots.php"><i class="fa fa-angle-double-left" aria-hidden="true"></i> Programmi MFO</a></p>
   <div class="mfo-board">
-    <div class="mfo-board-heading"><div><h2>VOY FLIGHT BOARD</h2><p><?php echo slot_e($activity->title ?? 'Programma MFO'); ?></p></div><span class="mfo-board-label">MFO</span></div>
+    <div class="mfo-board-heading"><div><h2>DEPARTURES</h2><p><?php echo slot_e($activity->title ?? 'Programma MFO'); ?></p><div class="mfo-board-dates"><span>START <strong><?php echo slot_e(slot_date($activity->startDate ?? null)); ?></strong></span><span>END <strong><?php echo slot_e(slot_date($activity->endDate ?? null)); ?></strong></span><small>UTC</small></div></div><span class="mfo-board-label">VOY MFO</span></div>
     <div class="table-responsive">
       <table class="table mfo-board-table">
         <thead><tr><th>FLIGHT</th><th>FROM</th><th>TO</th><th>AIRCRAFT</th><th>STATUS</th><th>PILOT</th><th>ACTION</th></tr></thead>
@@ -76,7 +81,7 @@ usort($rows, static function ($a, $b) {
           <td><?php echo slot_e($leg->departureIcao ?? '—'); ?></td>
           <td><?php echo slot_e($leg->arrivalIcao ?? '—'); ?></td>
           <td><?php echo slot_e($leg->aircraft ?? '—'); ?></td>
-          <td><span class="mfo-status <?php echo slot_e($statusClass); ?>">● <?php echo slot_e($state); ?></span></td>
+          <td><span class="mfo-status <?php echo slot_e($statusClass); ?>">● <?php echo slot_e(['AVAILABLE' => 'CHECK-IN OPEN', 'BOOKED' => 'BOARDING', 'COMPLETED' => 'DEPARTED'][$state] ?? $state); ?></span></td>
           <td><?php echo slot_e($info['callsign'] ?: '—'); ?></td>
           <td><?php if ($state === 'AVAILABLE'): ?><button type="button" class="btn btn-success btn-sm" disabled title="Prenotazione in preparazione">BOOK</button><?php else: ?>—<?php endif; ?></td>
         </tr>
@@ -93,6 +98,9 @@ usort($rows, static function ($a, $b) {
 .mfo-board-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}
 .mfo-board-heading h2{color:#fff;font-size:24px;margin:0 0 5px}
 .mfo-board-heading p{color:#a9bacb;margin:0;text-transform:uppercase;letter-spacing:.6px}
+.mfo-board-dates{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;color:#a9bacb;font-size:12px;letter-spacing:.7px}
+.mfo-board-dates strong{color:#eef5fb;margin-left:6px;font-size:14px}
+.mfo-board-dates small{color:#8299ac}
 .mfo-board-label{background:#1f6648;color:#caffdd;border-radius:12px;padding:4px 12px;font-size:12px}
 .mfo-board-table{color:#eef5fb;margin-bottom:0}
 .mfo-board-table>thead>tr>th{color:#a9bacb;border-bottom:1px solid #3b4b5d;font-size:12px}
@@ -101,7 +109,9 @@ usort($rows, static function ($a, $b) {
 .mfo-flight{font-weight:700}
 .mfo-status{white-space:nowrap;font-weight:600;font-size:12px}
 .mfo-status.available{color:#59d49b}
-.mfo-status.booked{color:#ffca70}
+.mfo-status.booked{color:#ffca70;animation:mfo-boarding-pulse 1.5s ease-in-out infinite}
+@keyframes mfo-boarding-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@media(prefers-reduced-motion:reduce){.mfo-status.booked{animation:none}}
 .mfo-status.completed{color:#8cb6ff}
 .mfo-status.other{color:#c2cbd4}
 .mfo-board-table .btn[disabled]{opacity:.65}
