@@ -41,7 +41,20 @@ try {
   check($status===200 && str_contains($body,'registrazione MFO non confermata'),'Failed registry reports reconciliation warning');
   check(!str_contains($body,'<form method="post">'),'Failed registry hides create form');
  } finally { @unlink($flag); }
+ // Simulate a timeout after the VaBase request was dispatched.
+ $apiFlag=__DIR__.'/runtime/public_html/proxy/ambiguous_api.flag';
+ file_put_contents($apiFlag,'1');
+ try {
+  [$status,$body]=request($url,$cookie);
+  preg_match('/name="csrf_token" value="([a-f0-9]{64})"/',$body,$m);
+  $valid['csrf_token']=$m[1]??'';
+  [$status,$body]=request($url,$cookie,$valid);
+  check($status===200 && str_contains($body,'esito della creazione VaBase non verificabile'),'Ambiguous API outcome requires reconciliation');
+  check(!str_contains($body,'<form method="post">'),'Ambiguous API outcome hides form');
+  [$status,$body]=request($url,$cookie,$valid);
+  check($status===200 && str_contains($body,'Creazione bloccata'),'Repeat POST rejected after ambiguous outcome');
+ } finally { @unlink($apiFlag); }
 } catch(Throwable $e){echo '[FAIL] '.$e->getMessage().PHP_EOL;$fail++;}
 @unlink($cookie);
-echo $fail?"FAIL ($fail)\n":"PASS (8 HTTP checks)\n";
+echo $fail?"FAIL ($fail)\n":"PASS (11 HTTP checks)\n";
 exit($fail?1:0);
