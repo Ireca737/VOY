@@ -66,8 +66,12 @@ final class Api {
   if ($method==='POST' && $path==='v1/activity/leg') {
    if ((int)($data['ActivityId']??0)!==900001) throw new \RuntimeException('Unexpected Activity ID');
    $pending=__DIR__.'/../admin/mfo/mock_pending_leg.json';
+   $legsFile=__DIR__.'/../admin/mfo/mock_legs.json';
+   $legs=is_file($legsFile)?json_decode(file_get_contents($legsFile),true):[];
+   $next=max(910000,...array_map(fn($leg)=>(int)$leg['id'],$legs?:[]))+1;
+   $data['_mockLegId']=$next;
    file_put_contents($pending,json_encode($data),LOCK_EX);
-   return new Reply('910001');
+   return new Reply((string)$next);
   }
   if ($method !== 'POST' || $path !== 'v1/activity') throw new \RuntimeException('Unexpected mock API call');
   if (file_exists(__DIR__.'/ambiguous_api.flag')) throw new \RuntimeException('Simulated VaBase timeout after dispatch');
@@ -89,12 +93,14 @@ class FakeResult {
 }
 class FakeStatement {
  private int $id=0;
+ private int $legId=0;
  public int $num_rows=0;
  public function __construct(private bool $lookup=false, private bool $slotInsert=false) {}
  public function store_result(): void { if ($this->lookup) { $file=__DIR__.'/mock_store.json'; $rows=is_file($file)?json_decode(file_get_contents($file),true):[]; foreach($rows?:[] as $row) if ((int)$row['activity_id']===$this->id) { $this->num_rows=1; break; } } }
  public function bind_param(string $type, &$id, &$legId=null): void {
   if ($this->slotInsert) {
-   if ($type!=='ii'||$id!==900001||$legId!==910001) throw new \RuntimeException('Wrong mock slot IDs');
+   if ($type!=='ii'||$id!==900001||!is_int($legId)||$legId<910001) throw new \RuntimeException('Wrong mock slot IDs');
+   $this->legId=$legId;
   } elseif ($type!=='i'||$id!==900001) throw new \RuntimeException('Wrong Activity ID');
   $this->id=$id;
  }
@@ -106,7 +112,9 @@ class FakeStatement {
    $data=json_decode(file_get_contents($pending),true);
    $file=__DIR__.'/mock_legs.json';
    $legs=is_file($file)?json_decode(file_get_contents($file),true):[];
-   $legs[]=['id'=>910001,'activityId'=>900001,'departureIcao'=>$data['DepartureIcao'],'arrivalIcao'=>$data['ArrivalIcao'],'flightNumber'=>$data['FlightNumber'],'status_mfo'=>'AVAILABLE'];
+   if ($this->legId!==(int)($data['_mockLegId']??0)) throw new \RuntimeException('Pending mock leg ID mismatch');
+   foreach ($legs?:[] as $existing) if ((int)$existing['id']===$this->legId) return false;
+   $legs[]=['id'=>$this->legId,'activityId'=>900001,'departureIcao'=>$data['DepartureIcao'],'arrivalIcao'=>$data['ArrivalIcao'],'flightNumber'=>$data['FlightNumber'],'status_mfo'=>'AVAILABLE'];
    file_put_contents($file,json_encode($legs),LOCK_EX);
    @unlink($pending);
    return true;
@@ -153,5 +161,24 @@ PHP
 );
 file_put_contents($root.'/config.php', "<?php\ndefine('website_base_url','/');\n");
 foreach (['nav','sidebar','footer'] as $name) file_put_contents($root.'/admin/includes/'.$name.'.php',"<!-- isolated $name -->");
+// Repair legacy duplicate IDs produced by the earlier mock (never touches real data).
+$legsPath=$root.'/admin/mfo/mock_legs.json';
+if (is_file($legsPath)) {
+ $legs=json_decode((string)file_get_contents($legsPath),true);
+ if (!is_array($legs)) throw new RuntimeException('Invalid local mock legs JSON');
+ $seen=[]; $next=max(910000,...array_map(fn($leg)=>(int)($leg['id']??0),$legs));
+ $changed=false;
+ foreach ($legs as &$leg) {
+  $id=(int)($leg['id']??0);
+  if (isset($seen[$id])) { $leg['id']=++$next; $changed=true; }
+  $seen[(int)$leg['id']]=true;
+ }
+ unset($leg);
+ if ($changed) {
+  copy($legsPath,$legsPath.'.legacy.bak');
+  file_put_contents($legsPath,json_encode($legs),LOCK_EX);
+  echo "Repaired duplicate legacy mock Leg IDs (backup: mock_legs.json.legacy.bak)\n";
+ }
+}
 echo "Fixture ready: $root\n";
 echo "Start with: php -S 127.0.0.1:8097 -t MFO/tests/http_local/runtime/public_html\n";
