@@ -83,6 +83,7 @@ class FakeStatement {
  public function store_result(): void { if ($this->lookup) { $file=__DIR__.'/mock_store.json'; $rows=is_file($file)?json_decode(file_get_contents($file),true):[]; foreach($rows?:[] as $row) if ((int)$row['activity_id']===$this->id) { $this->num_rows=1; break; } } }
  public function bind_param(string $type, &$id): void { if ($type!=='i'||$id!==900001) throw new \RuntimeException('Wrong Activity ID'); $this->id=$id; }
  public function execute(): bool {
+  if ($this->lookup) return true; // SELECT: store_result() reads the existing registry.
   if (file_exists(__DIR__.'/fail_registry.flag')) return false;
   $pending=__DIR__.'/mock_pending.json';
   if (!is_file($pending)) throw new \RuntimeException('No pending mock activity');
