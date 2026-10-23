@@ -7,8 +7,14 @@ if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 \Proxy\Api\Api::__constructStatic();
 validateAdminSession();
 if (!userHasPermission(11)) { header('Location: '.website_base_url.'admin/access_denied.php'); exit; }
-// Server-side pre-production gate. Change only after explicit release approval.
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') { http_response_code(403); exit('MFO in collaudo: scritture disabilitate'); }
+// Controlled pilot: POST is permitted only for creating an MFO leg.
+// Other MFO edit endpoints remain read-only until separately approved.
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+$script = basename((string)($_SERVER['SCRIPT_FILENAME'] ?? ''));
+if (!in_array($method, ['GET', 'HEAD'], true) && !($method === 'POST' && $script === 'create_leg.php')) {
+    http_response_code(403);
+    exit('MFO in collaudo: scritture disabilitate');
+}
 require_once __DIR__ . '/../../voy/secure_config/conn_voy.php';
 if (!isset($conn) || !($conn instanceof mysqli)) throw new RuntimeException('Connessione VOY assente');
 function mfo_e($s): string { return htmlspecialchars((string)($s ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
