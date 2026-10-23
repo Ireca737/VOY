@@ -24,8 +24,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET' && ($_SERVER['REQUEST_METHOD
 $programs = [];
 $error = null;
 try {
-    // Dal percorso /admin/mfo/ si risale a /admin/voy/secure_config/.
-    require_once __DIR__ . '/../voy/secure_config/conn_voy.php';
+    // Dal percorso /admin/mfo/ si risale a /voy/secure_config/.
+    require_once __DIR__ . '/../../voy/secure_config/conn_voy.php';
     if (!isset($conn) || !($conn instanceof mysqli)) {
         throw new RuntimeException('Connessione VOY non disponibile.');
     }
