@@ -83,7 +83,7 @@ function slot_date($value): string {
           <td><?php echo slot_e($leg->aircraft ?? '—'); ?></td>
           <td><span class="mfo-status <?php echo slot_e($statusClass); ?>">● <?php echo slot_e(['AVAILABLE' => 'CHECK-IN OPEN', 'BOOKED' => 'BOARDING', 'COMPLETED' => 'DEPARTED'][$state] ?? $state); ?></span></td>
           <td><?php echo slot_e($info['callsign'] ?: '—'); ?></td>
-          <td><?php if ($state === 'AVAILABLE'): ?><button type="button" class="btn btn-success btn-sm" disabled title="Prenotazione in preparazione">BOOK</button><?php else: ?>—<?php endif; ?></td>
+          <td><?php if ($state === 'AVAILABLE'): ?><a class="btn btn-success btn-sm" href="<?php echo slot_e(website_base_url); ?>activity_leg.php?id=<?php echo (int)$leg->id; ?>">BOOK</a><?php else: ?>—<?php endif; ?></td>
         </tr>
         <?php endforeach; ?>
         <?php if (!$rows): ?><tr><td colspan="7" class="text-center">Nessuna tratta MFO disponibile per questo programma.</td></tr><?php endif; ?>
@@ -114,6 +114,5 @@ function slot_date($value): string {
 @media(prefers-reduced-motion:reduce){.mfo-status.booked{animation:none}}
 .mfo-status.completed{color:#8cb6ff}
 .mfo-status.other{color:#c2cbd4}
-.mfo-board-table .btn[disabled]{opacity:.65}
 </style>
 <?php include 'includes/footer.php'; ?>
