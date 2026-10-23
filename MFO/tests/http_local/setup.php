@@ -29,6 +29,7 @@ final class Api {
  public static function __constructStatic(): void {}
  public static function sendSync(string $method,string $path,$data): Reply {
   if ($method !== 'POST' || $path !== 'v1/activity') throw new \RuntimeException('Unexpected mock API call');
+  if (file_exists(__DIR__.'/ambiguous_api.flag')) throw new \RuntimeException('Simulated VaBase timeout after dispatch');
   if (($data['Type']??'')!=='Event' || ($data['LegsInOrder']??true)!==false) throw new \RuntimeException('Invalid MFO flags');
   return new Reply();
  }
