@@ -9,7 +9,7 @@ validateAdminSession();
 if (!userHasPermission(11)) { header('Location: '.website_base_url.'admin/access_denied.php'); exit; }
 // Server-side pre-production gate. Change only after explicit release approval.
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') { http_response_code(403); exit('MFO in collaudo: scritture disabilitate'); }
-require_once __DIR__ . '/../voy/secure_config/conn_voy.php';
+require_once __DIR__ . '/../../voy/secure_config/conn_voy.php';
 if (!isset($conn) || !($conn instanceof mysqli)) throw new RuntimeException('Connessione VOY assente');
 function mfo_e($s): string { return htmlspecialchars((string)($s ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 function mfo_program(mysqli $db, int $id): bool {
