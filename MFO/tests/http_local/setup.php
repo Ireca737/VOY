@@ -25,6 +25,9 @@ file_put_contents($root.'/admin/mfo/_common.php',$common);
 $editSource=dirname(__DIR__,2).'/admin/edit.php';
 if (!is_file($editSource)) throw new RuntimeException('Missing MFO edit.php');
 copy($editSource,$root.'/admin/mfo/edit.php');
+$legSource=dirname(__DIR__,2).'/admin/create_leg.php';
+if (!is_file($legSource)) throw new RuntimeException('Missing MFO create_leg.php');
+copy($legSource,$root.'/admin/mfo/create_leg.php');
 file_put_contents($root.'/lib/functions.php', <<<'PHP'
 <?php
 function validateAdminSession(): void {}
