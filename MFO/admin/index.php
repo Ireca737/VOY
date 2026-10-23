@@ -78,6 +78,7 @@ function mfoEsc($value): string
                             Gestione MFO
                         </h1>
                     </div>
+                    <div class="col-auto mb-3"><a class="btn btn-primary" href="create.php"><i data-feather="plus" class="me-1"></i>Nuovo programma MFO</a></div>
                 </div>
             </div>
         </div>
@@ -89,13 +90,13 @@ function mfoEsc($value): string
             <div class="card mb-4">
                 <div class="card-header">Programmi MFO</div>
                 <div class="card-body">
-                    <p class="text-muted">Prima versione in sola lettura: nessuna modifica a VaBase o agli slot.</p>
+                    <p class="text-muted">Programmi MFO registrati. La gestione delle tratte si apre dalla scheda del programma.</p>
                     <?php if (!$programs): ?>
                         <div class="alert alert-info">Nessun programma MFO registrato.</div>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
-                                <thead><tr><th>ID MFO</th><th>Activity ID</th><th>Programma</th><th>Tipo</th><th>Attivo</th><th>Scadenza (UTC)</th></tr></thead>
+                                <thead><tr><th>ID MFO</th><th>Activity ID</th><th>Programma</th><th>Tipo</th><th>Attivo</th><th>Scadenza (UTC)</th><th>Azioni</th></tr></thead>
                                 <tbody>
                                 <?php foreach ($programs as $program):
                                     $activity = $program['activity'];
@@ -107,6 +108,7 @@ function mfoEsc($value): string
                                         <td><?php echo $activity ? mfoEsc($activity['type'] ?? '') : '—'; ?></td>
                                         <td><?php echo $activity ? (filter_var($activity['active'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'Sì' : 'No') : '—'; ?></td>
                                         <td><?php echo $activity ? mfoEsc($activity['endDate'] ?? 'Nessuna scadenza') : '—'; ?></td>
+                                        <td><a class="btn btn-sm btn-outline-primary" href="edit.php?id=<?php echo (int) $program['activity_id']; ?>">Gestisci programma e tratte</a></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
