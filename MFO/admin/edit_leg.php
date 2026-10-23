@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   if (typeof EditorJS === 'undefined') { holder.textContent = 'Editor non disponibile. Ricaricare la pagina.'; form.querySelector('[type=submit]').disabled = true; return; }
   let data;
   try { data = field.value ? JSON.parse(field.value) : undefined; } catch (_) { data = undefined; }
-  const editor = new EditorJS({holder: 'editorJs', data, tools: {
+  const editor = new EditorJS({holder: 'editorJs', data, readOnly: <?= $editable ? 'false' : 'true' ?>, tools: {
     header: {class: Header, inlineToolbar: true},
     list: {class: EditorjsList, inlineToolbar: true},
     embed: Embed,
