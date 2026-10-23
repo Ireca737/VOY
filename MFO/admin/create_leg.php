@@ -16,7 +16,37 @@ function mfo_leg_diagnostic(string $message): void {
 }
 $error=null;
 // Administrative reconciliation of a prior uncertain POST. This does NOT create a leg.
-if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reconcile_leg'])) {
+if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['verify_clean_state'])) {
+ if (!mfo_verify()) $error='Token non valido';
+ elseif (empty($_SESSION['mfo_leg_block_'.$id])) $error='Nessun blocco da sbloccare';
+ elseif (!isset($a->activityLegs) || !is_array($a->activityLegs)) $error='Elenco tratte VaBase non disponibile: blocco mantenuto';
+ else {
+  $remoteIds=[]; $valid=true;
+  foreach ($a->activityLegs as $leg) {
+   $legId=filter_var($leg->id??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+   if (!$legId || isset($remoteIds[$legId])) { $valid=false; break; }
+   $remoteIds[$legId]=true;
+  }
+  $check=$conn->prepare('SELECT activity_leg_id FROM voy_mfo_slots WHERE activity_id=?');
+  if (!$valid || !$check) $error='Impossibile verificare tutte le tratte: blocco mantenuto';
+  else {
+   $check->bind_param('i',$id);
+   if (!$check->execute()) $error='Lettura slot MFO fallita: blocco mantenuto';
+   else {
+    $check->bind_result($registeredId); $registeredIds=[];
+    while ($check->fetch()) $registeredIds[(int)$registeredId]=true;
+    if (count($remoteIds)!==count($registeredIds) || array_diff_key($remoteIds,$registeredIds) || array_diff_key($registeredIds,$remoteIds)) {
+     $error='VaBase e registro MFO non coincidono: blocco mantenuto. Verificare le tratte mancanti o non registrate.';
+    } else {
+     unset($_SESSION['mfo_leg_block_'.$id]);
+     mfo_leg_diagnostic('activity='.$id.' verified_clean_state='.count($remoteIds));
+     header('Location: create_leg.php?id='.$id); exit;
+    }
+   }
+   $check->close();
+  }
+ }
+} elseif ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reconcile_leg'])) {
  if (!mfo_verify()) $error='Token non valido';
  elseif (empty($_SESSION['mfo_leg_block_'.$id])) $error='Nessun blocco da riconciliare';
  else {
@@ -127,7 +157,7 @@ $blocked=!empty($_SESSION['mfo_leg_block_'.$id]);
 <div class="container-fluid px-4">
 <?php if($error): ?><div class="alert alert-danger"><?=mfo_e($error)?></div><?php endif; ?>
 <?php if($blocked): ?><div class="alert alert-warning">Creazione bloccata dopo una risposta VaBase non riconciliata. Se la tratta e gia registrata in VOY e presente su VaBase, verifica il suo ID per sbloccare la creazione.</div>
-<form method="post" class="card card-body mb-4"><input type="hidden" name="csrf_token" value="<?=mfo_e(mfo_token())?>"><label for="reconcile_leg" class="form-label">Leg ID gia riconciliato</label><input id="reconcile_leg" class="form-control mb-3" type="number" min="1" name="reconcile_leg" required><button type="submit" class="btn btn-outline-primary">Verifica e sblocca</button></form><?php else: ?>
+<form method="post" class="card card-body mb-3"><input type="hidden" name="csrf_token" value="<?=mfo_e(mfo_token())?>"><button type="submit" name="verify_clean_state" value="1" class="btn btn-outline-primary">Verifica corrispondenza VaBase / MFO e sblocca</button></form>\n<form method="post" class="card card-body mb-4"><input type="hidden" name="csrf_token" value="<?=mfo_e(mfo_token())?>"><label for="reconcile_leg" class="form-label">Leg ID gia riconciliato</label><input id="reconcile_leg" class="form-control mb-3" type="number" min="1" name="reconcile_leg" required><button type="submit" class="btn btn-outline-primary">Verifica e sblocca</button></form><?php else: ?>
 <div class="card mb-4"><div class="card-body"><form method="post"><input type="hidden" name="csrf_token" value="<?=mfo_e(mfo_token())?>">
 <div class="row"><div class="col-md-6 mb-3"><label>Partenza ICAO</label><input class="form-control" name="departure" maxlength="4" required></div><div class="col-md-6 mb-3"><label>Arrivo ICAO</label><input class="form-control" name="arrival" maxlength="4" required></div></div>
 <div class="row"><div class="col-md-6 mb-3"><label>Numero volo</label><input class="form-control" name="flightNumber"></div><div class="col-md-6 mb-3"><label>Aeromobile ICAO</label><input class="form-control" name="aircraft"></div></div>
