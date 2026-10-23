@@ -51,7 +51,7 @@ $endValue=!empty($a->endDate)?substr(str_replace(' ','T',$a->endDate),0,16):'';
 <button class="btn btn-primary">Salva</button></form></div></div>
 <div class="card mb-4"><div class="card-header">Slot / tratte <a class="btn btn-sm btn-primary float-end" href="create_leg.php?id=<?=(int)$id?>">Nuova tratta</a></div>
 <div class="card-body"><table class="table table-bordered"><thead><tr><th>Leg ID</th><th>Partenza</th><th>Arrivo</th><th>Volo</th><th>Azioni</th></tr></thead><tbody>
-<?php foreach(($a->activityLegs??[]) as $leg): ?><tr><td><?= (int)$leg->id ?></td><td><?=mfo_e($leg->departureIcao??'')?></td><td><?=mfo_e($leg->arrivalIcao??'')?></td><td><?=mfo_e($leg->flightNumber??'')?></td><td><a href="edit_leg.php?leg_id=<?=(int)$leg->id?>">Modifica</a></td></tr><?php endforeach; ?>
+<?php foreach(($a->activityLegs??[]) as $leg): ?><tr><td><?= (int)$leg->id ?></td><td><?=mfo_e($leg->departureIcao??'')?></td><td><?=mfo_e($leg->arrivalIcao??'')?></td><td><?=mfo_e($leg->flightNumber??'')?></td><td><a href="edit_leg.php?leg_id=<?=(int)$leg->id?>">Modifica</a> <a class="text-danger ms-2" href="delete_leg.php?leg_id=<?=(int)$leg->id?>">Elimina</a></td></tr><?php endforeach; ?>
 </tbody></table></div></div></div></main>
 <?php include __DIR__.'/../includes/footer.php'; ?>
 
