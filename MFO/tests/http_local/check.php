@@ -41,6 +41,8 @@ try {
   check($status===200 && str_contains($body,'registrazione MFO non confermata'),'Failed registry reports reconciliation warning');
   check(!str_contains($body,'<form method="post">'),'Failed registry hides create form');
  } finally { @unlink($flag); }
+ // Start a fresh browser session: the prior registry failure deliberately locks its session.
+ unset($GLOBALS['sessionCookie']);
  // Simulate a timeout after the VaBase request was dispatched.
  $apiFlag=__DIR__.'/runtime/public_html/proxy/ambiguous_api.flag';
  file_put_contents($apiFlag,'1');
