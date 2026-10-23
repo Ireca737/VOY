@@ -161,12 +161,7 @@ if (empty($_SESSION['mfo_create_csrf'])) {
                         <label class="form-label" for="title">Titolo</label>
                         <input class="form-control" id="title" name="title" maxlength="200" required value="<?php echo mfoCreateEsc($values['title']); ?>">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="description">Descrizione EditorJS (JSON)</label>
-                        <textarea class="form-control font-monospace" id="description" name="description" rows="7" required><?php echo mfoCreateEsc($values['description']); ?></textarea>
-                        <small class="text-muted">Interfaccia tecnica provvisoria; l'editor grafico verrà integrato dopo la verifica del componente VaBase.</small>
-                    </div>
-                    <div class="row">
+                    <div class="mb-3"><label class="form-label">Descrizione</label><div id="editorJs" class="form-control" style="min-height:180px"></div><input type="hidden" name="description" id="mfoDescription" value="<?php echo mfoCreateEsc($values['description']); ?>"><div class="form-text">Editor grafico VaBase (EditorJS).</div></div><div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label" for="start">Inizio (UTC)</label>
                             <input class="form-control" type="datetime-local" id="start" name="start" required value="<?php echo mfoCreateEsc($values['start']); ?>">
@@ -190,3 +185,39 @@ if (empty($_SESSION['mfo_create_csrf'])) {
     </div>
 </main>
 <?php include __DIR__ . '/../includes/footer.php'; ?>
+
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@latest"></script>
+<script>
+(function () {
+  const holder = document.getElementById('editorJs');
+  const field = document.getElementById('mfoDescription');
+  const form = field && field.closest('form');
+  if (!holder || !field || !form) return;
+  if (typeof EditorJS === 'undefined') { holder.textContent = 'Editor non disponibile. Ricaricare la pagina.'; form.querySelector('[type=submit]').disabled = true; return; }
+  let data;
+  try { data = field.value ? JSON.parse(field.value) : undefined; } catch (_) { data = undefined; }
+  const editor = new EditorJS({holder: 'editorJs', data, tools: {
+    header: {class: Header, inlineToolbar: true},
+    list: {class: EditorjsList, inlineToolbar: true},
+    embed: Embed,
+    raw: RawTool
+  }});
+  let sending = false;
+  form.addEventListener('submit', async function (event) {
+    if (sending) return;
+    event.preventDefault();
+    try {
+      await editor.isReady;
+      const result = await editor.save();
+      if (!result.blocks || !result.blocks.length) { alert('Inserire una descrizione.'); return; }
+      field.value = JSON.stringify(result);
+      sending = true;
+      form.requestSubmit();
+    } catch (error) { alert('Impossibile salvare la descrizione: ' + error.message); }
+  });
+})();
+</script>
