@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($error === null) {
         try {
             // Verificare questo percorso sul server prima della pubblicazione.
-            require_once __DIR__ . '/../voy/secure_config/conn_voy.php';
+            require_once __DIR__ . '/../../voy/secure_config/conn_voy.php';
             if (!isset($conn) || !($conn instanceof mysqli)) {
                 throw new RuntimeException('Connessione VOY non disponibile.');
             }
