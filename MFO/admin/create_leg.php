@@ -21,8 +21,23 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     'DepartureIcao'=>$dep,'ArrivalIcao'=>$arr,'Route'=>strtoupper(trim((string)($_POST['route']??''))),
     'Duration'=>null,'Description'=>$desc,'Aircraft'=>strtoupper(trim((string)($_POST['aircraft']??''))),
     'AircraftReg'=>strtoupper(trim((string)($_POST['aircraftReg']??'')))];
-   $res=\Proxy\Api\Api::sendSync('POST','v1/activity/leg',$data);
-   if ($res->getStatusCode()===200) {
+   // Once the POST starts, an exception or unexpected response may still mean
+   // that VaBase created the leg. Never retry without reconciliation.
+   $_SESSION['mfo_leg_block_'.$id]=true;
+   try {
+    $res=\Proxy\Api\Api::sendSync('POST','v1/activity/leg',$data);
+    $responseBody=(string)$res->getBody();
+    $decoded=json_decode($responseBody,true);
+    $responseFormat=trim($responseBody)==='' ? 'empty' : (json_last_error()===JSON_ERROR_NONE ? 'json:'.gettype($decoded) : 'non-json');
+    $responseLength=strlen($responseBody);
+    $responseKeys=is_array($decoded) ? implode(',',array_slice(array_keys($decoded),0,12)) : '-';
+    // Log only metadata, never response contents, credentials or user-supplied data.
+    error_log('[MFO leg diagnostic] activity='.$id.' http='.$res->getStatusCode().' format='.$responseFormat.' bytes='.$responseLength.' keys='.$responseKeys);
+   } catch (Throwable $e) {
+    error_log('[MFO leg diagnostic] activity='.$id.' request_exception='.get_class($e));
+    $error='Esito VaBase non verificabile. Controllare le tratte prima di ripetere.';
+   }
+   if (isset($res) && $res->getStatusCode()===200) {
     // La sincronizzazione con voy_mfo_slots richiede l'ID leg restituito da VaBase.
     // Non inventare l'ID e non considerare lo slot disponibile fino alla registrazione.
     $body=trim((string)$res->getBody()," \t\r\n\" ");
@@ -37,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       }
     } else $error='VaBase ha creato la tratta, ma non ha restituito un ID utilizzabile. Verificare prima di ripetere.';
     $_SESSION['mfo_leg_block_'.$id]=true;
-   } else $error='VaBase non ha accettato la tratta';
+   } elseif (isset($res)) $error='Risposta VaBase HTTP '.$res->getStatusCode().'. Verificare le tratte prima di ripetere.';
   }
  }
 }
