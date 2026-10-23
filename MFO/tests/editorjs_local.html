@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MFO - test locale EditorJS</title>
+<style>body{font:16px system-ui,sans-serif;max-width:850px;margin:32px auto;padding:0 20px;color:#263238}#editorJs{border:1px solid #ccd5df;border-radius:6px;min-height:180px;padding:12px}button{padding:10px 18px;margin:12px 8px 12px 0;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f3f5f8;padding:16px;border-radius:6px}#status{font-weight:600}</style></head>
+<body><h1>VOY MFO — collaudo EditorJS</h1><p>Pagina autonoma: non chiama API VaBase e non modifica database o server. Richiede Internet per le librerie CDN.</p>
+<form id="editorForm"><div id="editorJs"></div><button type="submit" id="save">Salva e mostra JSON</button><button type="button" id="reload">Ricarica JSON nell'editor</button></form>
+<p id="status">Caricamento editor...</p><h2>JSON generato</h2><pre id="output">—</pre>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@latest"></script>
+<script>
+(async function(){
+ const status=document.getElementById('status'),out=document.getElementById('output'),save=document.getElementById('save');
+ if(['EditorJS','Header','EditorjsList','Embed','RawTool'].some(k=>typeof window[k]==='undefined')){
+   status.textContent='ERRORE: una o più librerie EditorJS non sono disponibili. Controllare la console (F12).';save.disabled=true;return;
+ }
+ let editor;
+ try {
+  editor=new EditorJS({holder:'editorJs',tools:{header:{class:Header,inlineToolbar:true},list:{class:EditorjsList,inlineToolbar:true},embed:Embed,raw:RawTool}});
+  await editor.isReady;status.textContent='Editor pronto: inserire un titolo e un paragrafo.';
+ }catch(e){status.textContent='ERRORE inizializzazione: '+e.message;save.disabled=true;return}
+ document.getElementById('editorForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  try {const data=await editor.save();if(!data.blocks.length){status.textContent='Nessun blocco da salvare';return}
+   out.textContent=JSON.stringify(data,null,2);status.textContent='JSON generato correttamente: '+data.blocks.length+' blocchi';
+  }catch(err){status.textContent='ERRORE salvataggio: '+err.message}
+ });
+ document.getElementById('reload').addEventListener('click',async()=>{
+  try{const data=JSON.parse(out.textContent);if(!Array.isArray(data.blocks))throw Error('JSON non valido');
+   await editor.render(data);status.textContent='JSON ricaricato nell’editor';
+  }catch(err){status.textContent='ERRORE ricaricamento: '+err.message}
+ });
+})();
+</script></body></html>
