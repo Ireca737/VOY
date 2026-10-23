@@ -23,13 +23,13 @@ try {
         $found = $check->num_rows === 1;
         $check->close();
         if (!$found) { http_response_code(404); exit('Programma MFO non trovato'); }
-        $stmt = $conn->prepare("SELECT activity_leg_id, callsign, status_mfo, status_flight FROM voy_mfo_slots WHERE activity_id = ? AND status_mfo <> 'OBSOLETE'");
+        $stmt = $conn->prepare("SELECT s.activity_leg_id, s.callsign, s.status_mfo, s.status_flight, p.pilota_nome FROM voy_mfo_slots s LEFT JOIN voy_suite_piloti p ON p.pilot_id = s.pilot_id WHERE s.activity_id = ? AND s.status_mfo <> 'OBSOLETE'");
         if (!$stmt) throw new RuntimeException('Elenco slot non disponibile');
         $stmt->bind_param('i', $activityId);
         $stmt->execute();
-        $stmt->bind_result($legId, $callsign, $statusMfo, $statusFlight);
+        $stmt->bind_result($legId, $callsign, $statusMfo, $statusFlight, $pilotName);
         $rows = [];
-        while ($stmt->fetch()) $rows[(int)$legId] = ['callsign' => $callsign, 'status_mfo' => $statusMfo, 'status_flight' => $statusFlight];
+        while ($stmt->fetch()) $rows[(int)$legId] = ['callsign' => $callsign, 'pilot_name' => $pilotName, 'status_mfo' => $statusMfo, 'status_flight' => $statusFlight];
         $stmt->close();
         return $rows;
     })($id);
@@ -82,7 +82,7 @@ function slot_date($value): string {
           <td><?php echo slot_e($leg->arrivalIcao ?? '—'); ?></td>
           <td><?php echo slot_e($leg->aircraft ?? '—'); ?></td>
           <td><span class="mfo-status <?php echo slot_e($statusClass); ?>">● <?php echo slot_e(['AVAILABLE' => 'CHECK-IN OPEN', 'BOOKED' => 'BOARDING', 'COMPLETED' => 'DEPARTED'][$state] ?? $state); ?></span></td>
-          <td><?php echo slot_e($info['callsign'] ?: '—'); ?></td>
+          <td><?php echo slot_e($info['pilot_name'] ?: ($info['callsign'] ?: '—')); ?></td>
           <td><?php if ($state === 'AVAILABLE'): ?><a class="btn btn-success btn-sm" href="<?php echo slot_e(website_base_url); ?>slot_leg.php?id=<?php echo (int)$leg->id; ?>">BOOK</a><?php else: ?>—<?php endif; ?></td>
         </tr>
         <?php endforeach; ?>
