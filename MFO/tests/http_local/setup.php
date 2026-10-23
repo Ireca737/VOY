@@ -2,11 +2,16 @@
 declare(strict_types=1);
 /** Build a disposable local web root with the REAL MFO create.php. */
 $root = __DIR__ . '/runtime/public_html';
-$dirs = ['/admin/mfo','/admin/includes','/lib','/proxy'];
+$dirs = ['/admin/mfo','/admin/includes','/lib','/proxy','/admin/voy/secure_config'];
 foreach ($dirs as $dir) if (!is_dir($root.$dir)) mkdir($root.$dir,0777,true);
 $source = dirname(__DIR__,2).'/admin/create.php';
 if (!is_file($source)) throw new RuntimeException('Missing real MFO/admin/create.php');
-copy($source,$root.'/admin/mfo/create.php');
+// Only the disposable fixture is patched; the repository's create.php is unchanged.
+$page=file_get_contents($source);
+$needle="if (!isset(\$conn) || !(\$conn instanceof mysqli))";
+if (!str_contains($page,$needle)) throw new RuntimeException('Unexpected create.php DB guard; fixture not built');
+$page=str_replace($needle,"if (!isset(\$conn) || !(\$conn instanceof \\MfoHttpFixture\\FakeDb))",$page);
+file_put_contents($root.'/admin/mfo/create.php',$page);
 file_put_contents($root.'/lib/functions.php', <<<'PHP'
 <?php
 function validateAdminSession(): void {}
