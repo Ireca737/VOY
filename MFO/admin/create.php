@@ -25,6 +25,8 @@ function mfoCreateEsc($value): string {
 
 $error = null;
 $createdActivityId = null;
+$activityRequestAttempted = false;
+$creationOutcomeUncertain = false;
 $values = [
     'title' => '', 'description' => '', 'start' => '',
     'end' => '', 'active' => '1',
@@ -38,7 +40,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submittedToken = (string) ($_POST['csrf_token'] ?? '');
     $expectedToken = (string) ($_SESSION['mfo_create_csrf'] ?? '');
 
-    if (!$expectedToken || !hash_equals($expectedToken, $submittedToken)) {
+    if (!empty($_SESSION['mfo_create_reconciliation_required'])) {
+        $error = 'Creazione bloccata: riconciliazione amministrativa richiesta prima di un nuovo tentativo.';
+    } elseif (!$expectedToken || !hash_equals($expectedToken, $submittedToken)) {
         $error = 'Sessione del modulo scaduta. Ricaricare la pagina.';
     } elseif ($values['title'] === '' || $values['description'] === '' || $values['start'] === '') {
         $error = 'Titolo, descrizione e data iniziale sono obbligatori.';
@@ -90,6 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'LegsInOrder' => false,
                 'MinRankId' => null,
             ];
+            // From this point a network error may conceal a successful remote creation.
+            $activityRequestAttempted = true;
             $response = Api::sendSync('POST', 'v1/activity', $data);
             if ($response->getStatusCode() !== 200) {
                 throw new RuntimeException('Creazione Activity rifiutata da VaBase (HTTP ' . $response->getStatusCode() . ').');
@@ -118,16 +124,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Throwable $e) {
             error_log('[MFO create] ' . $e->getMessage() .
                 ($createdActivityId !== null ? ' | orphan activity_id=' . $createdActivityId : ''));
-            $error = $createdActivityId === null
-                ? 'Creazione non completata: ' . $e->getMessage()
-                : 'ATTENZIONE: Activity VaBase #' . $createdActivityId .
-                  ' creata, ma registrazione MFO non confermata. Non ripetere la creazione: occorre riconciliare il record.';
+            $creationOutcomeUncertain = $activityRequestAttempted && $createdActivityId === null;
+            $error = $createdActivityId !== null
+                ? 'ATTENZIONE: Activity VaBase #' . $createdActivityId .
+                  ' creata, ma registrazione MFO non confermata. Non ripetere la creazione: occorre riconciliare il record.'
+                : ($creationOutcomeUncertain
+                    ? 'ATTENZIONE: esito della creazione VaBase non verificabile. Non ripetere la creazione: controllare le Activity VaBase e riconciliare prima di procedere.'
+                    : 'Creazione non completata: ' . $e->getMessage());
+            if ($creationOutcomeUncertain || $createdActivityId !== null) {
+                $_SESSION['mfo_create_reconciliation_required'] = true;
+            }
             // Evita che un secondo invio ripeta una creazione VaBase potenzialmente già avvenuta.
             unset($_SESSION['mfo_create_csrf']);
         }
     }
 }
-if (empty($_SESSION['mfo_create_csrf'])) {
+if (empty($_SESSION['mfo_create_csrf']) && empty($_SESSION['mfo_create_reconciliation_required'])) {
     $_SESSION['mfo_create_csrf'] = bin2hex(random_bytes(32));
 }
 ?>
@@ -154,7 +166,7 @@ if (empty($_SESSION['mfo_create_csrf'])) {
             <div class="card-header">Dati programma</div>
             <div class="card-body">
                 <p class="text-muted">MFO crea sempre una Activity VaBase di tipo Event con tratte senza ordine obbligatorio. Le date sono UTC.</p>
-                <?php if ($createdActivityId === null): ?>
+                <?php if ($createdActivityId === null && empty($_SESSION['mfo_create_reconciliation_required'])): ?>
                 <form method="post">
                     <input type="hidden" name="csrf_token" value="<?php echo mfoCreateEsc($_SESSION['mfo_create_csrf']); ?>">
                     <div class="mb-3">
@@ -178,7 +190,7 @@ if (empty($_SESSION['mfo_create_csrf'])) {
                     <button class="btn btn-primary" type="submit">Crea programma MFO</button>
                 </form>
                 <?php else: ?>
-                    <p>Creazione da verificare: Activity VaBase #<?php echo (int) $createdActivityId; ?>. Non inviare nuovamente il modulo.</p>
+                    <p>Creazione da verificare<?php if ($createdActivityId !== null): ?>: Activity VaBase #<?php echo (int) $createdActivityId; ?><?php endif; ?>. Non inviare nuovamente il modulo: è necessaria una riconciliazione amministrativa.</p>
                 <?php endif; ?>
             </div>
         </div>
