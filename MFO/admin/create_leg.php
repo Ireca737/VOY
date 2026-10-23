@@ -53,7 +53,7 @@ $blocked=!empty($_SESSION['mfo_leg_block_'.$id]);
 <div class="row"><div class="col-md-6 mb-3"><label>Numero volo</label><input class="form-control" name="flightNumber"></div><div class="col-md-6 mb-3"><label>Aeromobile ICAO</label><input class="form-control" name="aircraft"></div></div>
 <div class="mb-3"><label>Rotta</label><input class="form-control" name="route"></div>
 <div class="mb-3"><label>Registrazione aeromobile</label><input class="form-control" name="aircraftReg"></div>
-<div class="mb-3"><label class="form-label">Descrizione</label><div id="editorJs" class="form-control" style="min-height:180px"></div><input type="hidden" name="description" id="mfoDescription" value="<?=mfo_e($leg->description??'')?>"></div>
+<div class="mb-3"><label class="form-label">Descrizione</label><div id="editorJs" class="form-control" style="min-height:180px"></div><input type="hidden" name="description" id="mfoDescription" value="<?=mfo_e($_POST['description']??'')?>"></div>
 <button class="btn btn-primary">Crea tratta e registra slot</button></form></div></div><?php endif; ?>
 </div></main>
 <?php include __DIR__.'/../includes/footer.php'; ?>
