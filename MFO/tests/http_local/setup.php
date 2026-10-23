@@ -21,10 +21,39 @@ PHP
 file_put_contents($root.'/proxy/api.php', <<<'PHP'
 <?php
 namespace Proxy\Api;
+final class Reply {
+ public function getStatusCode(): int { return 200; }
+ public function getBody(): string { return '900001'; }
+}
 final class Api {
  public static function __constructStatic(): void {}
- public static function sendSync(...$args): never { throw new \RuntimeException('Blocked: VaBase API is disabled in local HTTP fixture'); }
+ public static function sendSync(string $method,string $path,$data): Reply {
+  if ($method !== 'POST' || $path !== 'v1/activity') throw new \RuntimeException('Unexpected mock API call');
+  if (($data['Type']??'')!=='Event' || ($data['LegsInOrder']??true)!==false) throw new \RuntimeException('Invalid MFO flags');
+  return new Reply();
+ }
 }
+PHP
+);
+file_put_contents($root.'/admin/mfo/mock_db.php', <<<'PHP'
+<?php
+namespace MfoHttpFixture;
+class FakeResult { public function free(): void {} }
+class FakeStatement {
+ public function bind_param(string $type, &$id): void { if ($type!=='i'||$id!==900001) throw new \RuntimeException('Wrong Activity ID'); }
+ public function execute(): bool { return !file_exists(__DIR__.'/fail_registry.flag'); }
+ public function close(): void {}
+}
+class FakeDb {
+ public function query(string $sql): FakeResult { if ($sql!=='SELECT id FROM voy_mfo_programs LIMIT 0') throw new \RuntimeException('Unexpected query'); return new FakeResult(); }
+ public function prepare(string $sql): FakeStatement { if (!str_contains($sql,'INSERT INTO voy_mfo_programs')) throw new \RuntimeException('Unexpected INSERT'); return new FakeStatement(); }
+}
+PHP
+);
+file_put_contents($root.'/admin/voy/secure_config/conn_voy.php', <<<'PHP'
+<?php
+require_once __DIR__.'/../../mfo/mock_db.php';
+$conn=new \MfoHttpFixture\FakeDb();
 PHP
 );
 file_put_contents($root.'/config.php', "<?php\ndefine('website_base_url','/');\n");
