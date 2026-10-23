@@ -52,7 +52,9 @@ final class Api {
     $a=$row['activity'];
     $a['description']=$row['description']??'{"blocks":[{"type":"paragraph","data":{"text":"Mock"}}]}';
     $a['startDate']=$row['startDate']??'2026-11-01T10:00';
-    $a['activityLegs']=[];
+    $legsFile=__DIR__.'/../admin/mfo/mock_legs.json';
+    $legs=is_file($legsFile)?json_decode(file_get_contents($legsFile),true):[];
+    $a['activityLegs']=array_values(array_filter($legs?:[],fn($leg)=>(int)$leg['activityId']===(int)$m[1]));
     return new Reply(json_encode($a));
    }
    throw new \RuntimeException('Mock activity not found');
@@ -60,6 +62,12 @@ final class Api {
   if ($method==='GET' && $path==='v1/activities') {
    $rows=is_file($file) ? json_decode(file_get_contents($file),true) : [];
    return new Reply(json_encode(array_map(fn($r)=>$r['activity'],$rows?:[])));
+  }
+  if ($method==='POST' && $path==='v1/activity/leg') {
+   if ((int)($data['ActivityId']??0)!==900001) throw new \RuntimeException('Unexpected Activity ID');
+   $pending=__DIR__.'/../admin/mfo/mock_pending_leg.json';
+   file_put_contents($pending,json_encode($data),LOCK_EX);
+   return new Reply('910001');
   }
   if ($method !== 'POST' || $path !== 'v1/activity') throw new \RuntimeException('Unexpected mock API call');
   if (file_exists(__DIR__.'/ambiguous_api.flag')) throw new \RuntimeException('Simulated VaBase timeout after dispatch');
@@ -82,11 +90,27 @@ class FakeResult {
 class FakeStatement {
  private int $id=0;
  public int $num_rows=0;
- public function __construct(private bool $lookup=false) {}
+ public function __construct(private bool $lookup=false, private bool $slotInsert=false) {}
  public function store_result(): void { if ($this->lookup) { $file=__DIR__.'/mock_store.json'; $rows=is_file($file)?json_decode(file_get_contents($file),true):[]; foreach($rows?:[] as $row) if ((int)$row['activity_id']===$this->id) { $this->num_rows=1; break; } } }
- public function bind_param(string $type, &$id): void { if ($type!=='i'||$id!==900001) throw new \RuntimeException('Wrong Activity ID'); $this->id=$id; }
+ public function bind_param(string $type, &$id, &$legId=null): void {
+  if ($this->slotInsert) {
+   if ($type!=='ii'||$id!==900001||$legId!==910001) throw new \RuntimeException('Wrong mock slot IDs');
+  } elseif ($type!=='i'||$id!==900001) throw new \RuntimeException('Wrong Activity ID');
+  $this->id=$id;
+ }
  public function execute(): bool {
   if ($this->lookup) return true; // SELECT: store_result() reads the existing registry.
+  if ($this->slotInsert) {
+   $pending=__DIR__.'/mock_pending_leg.json';
+   if (!is_file($pending)) throw new \RuntimeException('No pending mock leg');
+   $data=json_decode(file_get_contents($pending),true);
+   $file=__DIR__.'/mock_legs.json';
+   $legs=is_file($file)?json_decode(file_get_contents($file),true):[];
+   $legs[]=['id'=>910001,'activityId'=>900001,'departureIcao'=>$data['DepartureIcao'],'arrivalIcao'=>$data['ArrivalIcao'],'flightNumber'=>$data['FlightNumber'],'status_mfo'=>'AVAILABLE'];
+   file_put_contents($file,json_encode($legs),LOCK_EX);
+   @unlink($pending);
+   return true;
+  }
   if (file_exists(__DIR__.'/fail_registry.flag')) return false;
   $pending=__DIR__.'/mock_pending.json';
   if (!is_file($pending)) throw new \RuntimeException('No pending mock activity');
@@ -114,6 +138,7 @@ class FakeDb {
  }
  public function prepare(string $sql): FakeStatement {
   if ($sql==='SELECT id FROM voy_mfo_programs WHERE activity_id=? LIMIT 1') return new FakeStatement(true);
+  if (str_contains($sql,'INSERT INTO voy_mfo_slots')) return new FakeStatement(false,true);
   if (!str_contains($sql,'INSERT INTO voy_mfo_programs')) throw new \RuntimeException('Unexpected INSERT');
   return new FakeStatement();
  }
