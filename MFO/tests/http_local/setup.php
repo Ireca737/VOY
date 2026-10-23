@@ -12,6 +12,10 @@ $needle="if (!isset(\$conn) || !(\$conn instanceof mysqli))";
 if (!str_contains($page,$needle)) throw new RuntimeException('Unexpected create.php DB guard; fixture not built');
 $page=str_replace($needle,"if (!isset(\$conn) || !(\$conn instanceof \\MfoHttpFixture\\FakeDb))",$page);
 file_put_contents($root.'/admin/mfo/create.php',$page);
+$indexSource=dirname(__DIR__,2).'/admin/index.php';
+$index=file_get_contents($indexSource);
+if ($index===false || !str_contains($index,$needle)) throw new RuntimeException('Unexpected MFO index source');
+file_put_contents($root.'/admin/mfo/index.php',str_replace($needle,"if (!isset(\\$conn) || !(\\$conn instanceof \\\\MfoHttpFixture\\\\FakeDb))",$index));
 file_put_contents($root.'/lib/functions.php', <<<'PHP'
 <?php
 function validateAdminSession(): void {}
@@ -22,16 +26,23 @@ file_put_contents($root.'/proxy/api.php', <<<'PHP'
 <?php
 namespace Proxy\Api;
 final class Reply {
+ public function __construct(private string $body) {}
  public function getStatusCode(): int { return 200; }
- public function getBody(): string { return '900001'; }
+ public function getBody(): string { return $this->body; }
 }
 final class Api {
  public static function __constructStatic(): void {}
  public static function sendSync(string $method,string $path,$data): Reply {
+  $file=__DIR__.'/../admin/mfo/mock_store.json';
+  if ($method==='GET' && $path==='v1/activities') {
+   $rows=is_file($file) ? json_decode(file_get_contents($file),true) : [];
+   return new Reply(json_encode(array_map(fn($r)=>$r['activity'],$rows?:[])));
+  }
   if ($method !== 'POST' || $path !== 'v1/activity') throw new \RuntimeException('Unexpected mock API call');
   if (file_exists(__DIR__.'/ambiguous_api.flag')) throw new \RuntimeException('Simulated VaBase timeout after dispatch');
   if (($data['Type']??'')!=='Event' || ($data['LegsInOrder']??true)!==false) throw new \RuntimeException('Invalid MFO flags');
-  return new Reply();
+  file_put_contents(__DIR__.'/../admin/mfo/mock_pending.json',json_encode($data),LOCK_EX);
+  return new Reply('900001');
  }
 }
 PHP
@@ -39,15 +50,44 @@ PHP
 file_put_contents($root.'/admin/mfo/mock_db.php', <<<'PHP'
 <?php
 namespace MfoHttpFixture;
-class FakeResult { public function free(): void {} }
+class FakeResult {
+ private int $offset=0;
+ public function __construct(private array $rows=[]) {}
+ public function fetch_assoc(): ?array { return $this->rows[$this->offset++] ?? null; }
+ public function free(): void {}
+}
 class FakeStatement {
- public function bind_param(string $type, &$id): void { if ($type!=='i'||$id!==900001) throw new \RuntimeException('Wrong Activity ID'); }
- public function execute(): bool { return !file_exists(__DIR__.'/fail_registry.flag'); }
+ private int $id=0;
+ public function bind_param(string $type, &$id): void { if ($type!=='i'||$id!==900001) throw new \RuntimeException('Wrong Activity ID'); $this->id=$id; }
+ public function execute(): bool {
+  if (file_exists(__DIR__.'/fail_registry.flag')) return false;
+  $pending=__DIR__.'/mock_pending.json';
+  if (!is_file($pending)) throw new \RuntimeException('No pending mock activity');
+  $data=json_decode(file_get_contents($pending),true);
+  $store=__DIR__.'/mock_store.json';
+  $rows=is_file($store)?json_decode(file_get_contents($store),true):[];
+  $rows[]=['id'=>count($rows)+1,'activity_id'=>$this->id,'created_at'=>gmdate('c'),
+   'activity'=>['id'=>$this->id,'title'=>$data['Title'],'type'=>$data['Type'],'active'=>$data['Active'],'endDate'=>$data['EndDate']]];
+  file_put_contents($store,json_encode($rows),LOCK_EX);
+  @unlink($pending);
+  return true;
+ }
  public function close(): void {}
 }
 class FakeDb {
- public function query(string $sql): FakeResult { if ($sql!=='SELECT id FROM voy_mfo_programs LIMIT 0') throw new \RuntimeException('Unexpected query'); return new FakeResult(); }
- public function prepare(string $sql): FakeStatement { if (!str_contains($sql,'INSERT INTO voy_mfo_programs')) throw new \RuntimeException('Unexpected INSERT'); return new FakeStatement(); }
+ public function query(string $sql): FakeResult {
+  if ($sql==='SELECT id FROM voy_mfo_programs LIMIT 0') return new FakeResult();
+  if ($sql==='SELECT id, activity_id, created_at FROM voy_mfo_programs ORDER BY id DESC') {
+   $file=__DIR__.'/mock_store.json';
+   $rows=is_file($file)?json_decode(file_get_contents($file),true):[];
+   return new FakeResult(array_reverse($rows?:[]));
+  }
+  throw new \RuntimeException('Unexpected query: '.$sql);
+ }
+ public function prepare(string $sql): FakeStatement {
+  if (!str_contains($sql,'INSERT INTO voy_mfo_programs')) throw new \RuntimeException('Unexpected INSERT');
+  return new FakeStatement();
+ }
 }
 PHP
 );
