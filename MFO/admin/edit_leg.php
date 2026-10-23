@@ -63,15 +63,19 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   const field = document.getElementById('mfoDescription');
   const form = field && field.closest('form');
   if (!holder || !field || !form) return;
-  if (typeof EditorJS === 'undefined') { holder.textContent = 'Editor non disponibile. Ricaricare la pagina.'; form.querySelector('[type=submit]').disabled = true; return; }
+  if (typeof EditorJS === 'undefined' || typeof Header === 'undefined' || typeof EditorjsList === 'undefined' || typeof Embed === 'undefined' || typeof RawTool === 'undefined') { holder.textContent = 'Editor non disponibile. Ricaricare la pagina.'; form.querySelector('[type=submit]').disabled = true; return; }
   let data;
   try { data = field.value ? JSON.parse(field.value) : undefined; } catch (_) { data = undefined; }
-  const editor = new EditorJS({holder: 'editorJs', data, readOnly: <?= $editable ? 'false' : 'true' ?>, tools: {
+  const editor = new EditorJS({holder: 'editorJs', data, readOnly: false, tools: {
     header: {class: Header, inlineToolbar: true},
     list: {class: EditorjsList, inlineToolbar: true},
     embed: Embed,
     raw: RawTool
   }});
+  <?php if (!$editable): ?>
+  holder.textContent = 'Slot non modificabile. Descrizione conservata nel registro VaBase.';
+  return;
+  <?php endif; ?>
   let sending = false;
   form.addEventListener('submit', async function (event) {
     if (sending) return;
