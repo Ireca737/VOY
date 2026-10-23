@@ -19,8 +19,9 @@ if (!userHasPermission(11)) {
     exit();
 }
 
-// Server-side pre-production gate: block every write before API or DB access.
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') { http_response_code(403); exit('MFO in collaudo: scritture disabilitate'); }
+// Limited production pilot: allow only GET, HEAD and POST on program creation.
+// All other MFO write endpoints remain gated during testing.
+if (!in_array(($_SERVER['REQUEST_METHOD'] ?? 'GET'), ['GET', 'HEAD', 'POST'], true)) { http_response_code(405); exit('Metodo non consentito'); }
 
 function mfoCreateEsc($value): string {
     return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
