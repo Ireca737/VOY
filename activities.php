@@ -18,29 +18,30 @@ if ($res->getStatusCode() == 200) {
     $activities = json_decode($res->getBody(), false);
 }
 
-// Exclude MFO programmes from the public Events showcase only.
-// Keep the VaBase Activity active and available to MFO administration.
+// Isolate the VOY database include so it cannot overwrite VaBase page variables.
 try {
-    require __DIR__ . '/voy/secure_config/conn_voy.php';
-    if (!isset($conn) || !($conn instanceof mysqli)) {
-        throw new RuntimeException('Connessione VOY non disponibile');
-    }
-    $mfoActivityIds = [];
-    $mfoResult = $conn->query('SELECT activity_id FROM voy_mfo_programs');
-    if ($mfoResult === false) {
-        throw new RuntimeException('Elenco programmi MFO non disponibile');
-    }
-    while ($mfoRow = $mfoResult->fetch_assoc()) {
-        $mfoActivityIds[(int)$mfoRow['activity_id']] = true;
-    }
-    $mfoResult->free();
+    $mfoActivityIds = (static function (): array {
+        require __DIR__ . '/voy/secure_config/conn_voy.php';
+        if (!isset($conn) || !($conn instanceof mysqli)) {
+            throw new RuntimeException('Connessione VOY non disponibile');
+        }
+        $ids = [];
+        $result = $conn->query('SELECT activity_id FROM voy_mfo_programs');
+        if ($result === false) {
+            throw new RuntimeException('Elenco programmi MFO non disponibile');
+        }
+        while ($row = $result->fetch_assoc()) {
+            $ids[(int)$row['activity_id']] = true;
+        }
+        $result->free();
+        return $ids;
+    })();
     if (is_array($activities)) {
         $activities = array_values(array_filter($activities, static function ($activity) use ($mfoActivityIds) {
             return !($activity->type === 'Event' && isset($mfoActivityIds[(int)$activity->id]));
         }));
     }
 } catch (Throwable $e) {
-    // Do not publish an unfiltered Events list when the MFO exclusion fails.
     error_log('[activities.php] Filtro MFO non disponibile: ' . get_class($e));
     http_response_code(503);
     exit('Elenco attività temporaneamente non disponibile.');
