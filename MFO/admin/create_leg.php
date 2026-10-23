@@ -8,7 +8,8 @@ $a=json_decode($r->getBody());
 if (!$a || $a->type!=='Event') { http_response_code(409); exit('Activity non valida'); }
 $error=null;
 if ($_SERVER['REQUEST_METHOD']==='POST') {
- if (!mfo_verify()) $error='Token non valido';
+ if (!empty($_SESSION['mfo_leg_block_'.$id])) $error='Creazione bloccata: riconciliare prima la tratta VaBase';
+ elseif (!mfo_verify()) $error='Token non valido';
  else {
   $dep=strtoupper(trim((string)($_POST['departure']??'')));
   $arr=strtoupper(trim((string)($_POST['arrival']??'')));
@@ -68,7 +69,7 @@ $blocked=!empty($_SESSION['mfo_leg_block_'.$id]);
   const field = document.getElementById('mfoDescription');
   const form = field && field.closest('form');
   if (!holder || !field || !form) return;
-  if (typeof EditorJS === 'undefined') { holder.textContent = 'Editor non disponibile. Ricaricare la pagina.'; form.querySelector('[type=submit]').disabled = true; return; }
+  if (typeof EditorJS === 'undefined' || typeof Header === 'undefined' || typeof EditorjsList === 'undefined' || typeof Embed === 'undefined' || typeof RawTool === 'undefined') { holder.textContent = 'Editor non disponibile. Ricaricare la pagina.'; form.querySelector('[type=submit]').disabled = true; return; }
   let data;
   try { data = field.value ? JSON.parse(field.value) : undefined; } catch (_) { data = undefined; }
   const editor = new EditorJS({holder: 'editorJs', data, tools: {
