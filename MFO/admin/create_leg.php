@@ -58,6 +58,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reconcile_leg'])) {
     'DepartureIcao'=>$dep,'ArrivalIcao'=>$arr,'Route'=>strtoupper(trim((string)($_POST['route']??''))),
     'Duration'=>null,'Description'=>$desc,'Aircraft'=>strtoupper(trim((string)($_POST['aircraft']??''))),
     'AircraftReg'=>strtoupper(trim((string)($_POST['aircraftReg']??'')))];
+   // Snapshot the remote leg IDs BEFORE the non-idempotent creation.
+   $beforeIds=[];
+   foreach (($a->activityLegs??[]) as $existingLeg) {
+    $existingId=(int)($existingLeg->id??0);
+    if ($existingId>0) $beforeIds[$existingId]=true;
+   }
+   // A missing or malformed snapshot is not safe for ID-difference reconciliation.
+   if (!isset($a->activityLegs) || !is_array($a->activityLegs)) {
+    $error='VaBase non ha fornito un elenco tratte valido: creazione non avviata';
+   } else {
    // Once the POST starts, an exception or unexpected response may still mean
    // that VaBase created the leg. Never retry without reconciliation.
    $_SESSION['mfo_leg_block_'.$id]=true;
@@ -75,21 +85,38 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reconcile_leg'])) {
     $error='Esito VaBase non verificabile. Controllare le tratte prima di ripetere.';
    }
    if (isset($res) && $res->getStatusCode()===200) {
-    // La sincronizzazione con voy_mfo_slots richiede l'ID leg restituito da VaBase.
-    // Non inventare l'ID e non considerare lo slot disponibile fino alla registrazione.
-    $body=trim((string)$res->getBody()," \t\r\n\" ");
-    if (ctype_digit($body) && (int)$body>0) {
-      $legId=(int)$body;
-      $s=$conn->prepare("INSERT INTO voy_mfo_slots (activity_id,activity_leg_id,status_mfo) VALUES (?,?,'AVAILABLE')");
-      if (!$s) { error_log('[MFO] leg '.$legId.' non registrata: prepare'); $error='Tratta VaBase creata (#'.$legId.'), registrazione slot fallita: riconciliare, non ripetere'; }
-      else { $s->bind_param('ii',$id,$legId); $ok=$s->execute(); $s->close();
-       if ($ok) { header('Location: edit.php?id='.$id); exit; }
-       error_log('[MFO] leg '.$legId.' non registrata: execute');
-       $error='Tratta VaBase creata (#'.$legId.'), registrazione slot fallita: riconciliare, non ripetere';
-      }
-    } else $error='VaBase ha creato la tratta, ma non ha restituito un ID utilizzabile. Verificare prima di ripetere.';
-    $_SESSION['mfo_leg_block_'.$id]=true;
+    try {
+     $refresh=\\Proxy\\Api\\Api::sendSync('GET','v1/activity/'.$id,null);
+     if ($refresh->getStatusCode()!==200) throw new RuntimeException('GET HTTP '.$refresh->getStatusCode());
+     $updated=json_decode((string)$refresh->getBody());
+     if (!$updated || !isset($updated->activityLegs) || !is_array($updated->activityLegs)) throw new RuntimeException('Elenco tratte assente');
+     $newLegs=[];
+     foreach ($updated->activityLegs as $candidate) {
+      $candidateId=(int)($candidate->id??0);
+      if ($candidateId>0 && !isset($beforeIds[$candidateId])) $newLegs[$candidateId]=$candidate;
+     }
+     mfo_leg_diagnostic('activity='.$id.' new_leg_count='.count($newLegs));
+     if (count($newLegs)!==1) throw new RuntimeException('Differenza Leg ID ambigua: '.count($newLegs));
+     $legId=(int)array_key_first($newLegs);
+     $candidate=$newLegs[$legId];
+     if (strtoupper((string)($candidate->departureIcao??''))!==$dep ||
+         strtoupper((string)($candidate->arrivalIcao??''))!==$arr ||
+         strtoupper((string)($candidate->flightNumber??''))!==$data['FlightNumber']) {
+      throw new RuntimeException('La nuova tratta non corrisponde ai dati inviati');
+     }
+     $insert=$conn->prepare("INSERT INTO voy_mfo_slots (activity_id,activity_leg_id,status_mfo) VALUES (?,?,'AVAILABLE')");
+     if (!$insert) throw new RuntimeException('Prepare DB fallita');
+     $insert->bind_param('ii',$id,$legId);
+     try { $inserted=$insert->execute(); } finally { $insert->close(); }
+     if (!$inserted) throw new RuntimeException('Insert DB fallita');
+     unset($_SESSION['mfo_leg_block_'.$id]);
+     header('Location: edit.php?id='.$id); exit;
+    } catch (Throwable $e) {
+     mfo_leg_diagnostic('activity='.$id.' reconciliation_error='.get_class($e).' reason='.preg_replace('/[^a-zA-Z0-9 :_-]/','', $e->getMessage()));
+     $error='Tratta VaBase probabilmente creata, ma sincronizzazione MFO non confermata. Verificare i Leg ID prima di ripetere.';
+    }
    } elseif (isset($res)) $error='Risposta VaBase HTTP '.$res->getStatusCode().'. Verificare le tratte prima di ripetere.';
+   }
   }
  }
 }
