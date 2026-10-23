@@ -15,7 +15,7 @@ file_put_contents($root.'/admin/mfo/create.php',$page);
 $indexSource=dirname(__DIR__,2).'/admin/index.php';
 $index=file_get_contents($indexSource);
 if ($index===false || !str_contains($index,$needle)) throw new RuntimeException('Unexpected MFO index source');
-file_put_contents($root.'/admin/mfo/index.php',str_replace($needle,"if (!isset(\\$conn) || !(\\$conn instanceof \\\\MfoHttpFixture\\\\FakeDb))",$index));
+file_put_contents($root.'/admin/mfo/index.php',str_replace($needle,"if (!isset(\$conn) || !(\$conn instanceof \\MfoHttpFixture\\FakeDb))",$index));
 file_put_contents($root.'/lib/functions.php', <<<'PHP'
 <?php
 function validateAdminSession(): void {}
