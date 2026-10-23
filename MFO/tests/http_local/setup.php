@@ -75,6 +75,26 @@ final class Api {
    $rows=is_file($file) ? json_decode(file_get_contents($file),true) : [];
    return new Reply(json_encode(array_map(fn($r)=>$r['activity'],$rows?:[])));
   }
+  if ($method==='PUT' && $path==='v1/activity/leg') {
+   $legId=(int)($data['Id']??0);
+   $activityId=(int)($data['ActivityId']??0);
+   $legsFile=__DIR__.'/../admin/mfo/mock_legs.json';
+   $legs=is_file($legsFile)?json_decode(file_get_contents($legsFile),true):[];
+   $updated=false;
+   foreach ($legs as &$leg) {
+    if ((int)$leg['id']!==$legId || (int)$leg['activityId']!==$activityId) continue;
+    if (($leg['status_mfo']??'')!=='AVAILABLE') throw new \RuntimeException('Mock slot is not editable');
+    foreach (['DepartureIcao'=>'departureIcao','ArrivalIcao'=>'arrivalIcao','FlightNumber'=>'flightNumber','Route'=>'route','Description'=>'description','Aircraft'=>'aircraft','AircraftReg'=>'aircraftReg'] as $source=>$target) {
+     $leg[$target]=$data[$source]??'';
+    }
+    $updated=true;
+    break;
+   }
+   unset($leg);
+   if (!$updated) throw new \RuntimeException('Mock leg not found for update');
+   file_put_contents($legsFile,json_encode($legs),LOCK_EX);
+   return new Reply('true');
+  }
   if ($method==='POST' && $path==='v1/activity/leg') {
    if ((int)($data['ActivityId']??0)!==900001) throw new \RuntimeException('Unexpected Activity ID');
    $pending=__DIR__.'/../admin/mfo/mock_pending_leg.json';
