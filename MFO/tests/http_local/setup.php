@@ -52,7 +52,7 @@ final class Api {
     $a['activityLegs']=[];
     return new Reply(json_encode($a));
    }
-   throw new \\RuntimeException('Mock activity not found');
+   throw new \RuntimeException('Mock activity not found');
   }
   if ($method==='GET' && $path==='v1/activities') {
    $rows=is_file($file) ? json_decode(file_get_contents($file),true) : [];
