@@ -6,6 +6,14 @@ $r=\Proxy\Api\Api::sendSync('GET','v1/activity/'.$id,null);
 if ($r->getStatusCode()!==200) { http_response_code(502); exit('Activity VaBase non disponibile'); }
 $a=json_decode($r->getBody());
 if (!$a || $a->type!=='Event') { http_response_code(409); exit('Activity non valida'); }
+// Dedicated diagnostics live outside public_html (account home), not web-accessible.
+function mfo_leg_diagnostic(string $message): void {
+ $path=dirname(__DIR__,3).'/mfo_leg_diagnostic.log';
+ $line='['.gmdate('Y-m-d\\TH:i:s\\Z').'] '.$message."\\n";
+ if (@file_put_contents($path,$line,FILE_APPEND|LOCK_EX)===false) {
+  error_log('[MFO diagnostic write failed] '.$message);
+ }
+}
 $error=null;
 // Administrative reconciliation of a prior uncertain POST. This does NOT create a leg.
 if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reconcile_leg'])) {
@@ -61,9 +69,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reconcile_leg'])) {
     $responseLength=strlen($responseBody);
     $responseKeys=is_array($decoded) ? implode(',',array_slice(array_keys($decoded),0,12)) : '-';
     // Log only metadata, never response contents, credentials or user-supplied data.
-    error_log('[MFO leg diagnostic] activity='.$id.' http='.$res->getStatusCode().' format='.$responseFormat.' bytes='.$responseLength.' keys='.$responseKeys);
+    mfo_leg_diagnostic('activity='.$id.' http='.$res->getStatusCode().' format='.$responseFormat.' bytes='.$responseLength.' keys='.$responseKeys);
    } catch (Throwable $e) {
-    error_log('[MFO leg diagnostic] activity='.$id.' request_exception='.get_class($e));
+    mfo_leg_diagnostic('activity='.$id.' request_exception='.get_class($e));
     $error='Esito VaBase non verificabile. Controllare le tratte prima di ripetere.';
    }
    if (isset($res) && $res->getStatusCode()===200) {
