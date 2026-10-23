@@ -43,7 +43,7 @@ $endValue=!empty($a->endDate)?substr(str_replace(' ','T',$a->endDate),0,16):'';
 <div class="card mb-4"><div class="card-header">Dati programma</div><div class="card-body">
 <form method="post"><input type="hidden" name="csrf_token" value="<?=mfo_e(mfo_token())?>">
 <div class="mb-3"><label class="form-label">Titolo</label><input class="form-control" name="title" required value="<?=mfo_e($a->title??'')?>"></div>
-<div class="mb-3"><label class="form-label">Descrizione EditorJS (JSON)</label><textarea class="form-control" name="description" rows="6" required><?=mfo_e($a->description??'')?></textarea></div>
+<div class="mb-3"><label class="form-label">Descrizione</label><div id="editorJs" class="form-control" style="min-height:180px"></div><input type="hidden" name="description" id="mfoDescription" value="<?=mfo_e($a->description??'')?>"></div>
 <div class="row"><div class="col-md-6 mb-3"><label class="form-label">Inizio UTC</label><input type="datetime-local" class="form-control" name="start" required value="<?=mfo_e($startValue)?>"></div>
 <div class="col-md-6 mb-3"><label class="form-label">Fine UTC</label><input type="datetime-local" class="form-control" name="end" value="<?=mfo_e($endValue)?>"></div></div>
 <div class="form-check mb-3"><input type="checkbox" class="form-check-input" name="active" id="active" <?=filter_var($a->active??false,FILTER_VALIDATE_BOOLEAN)?'checked':''?>><label for="active" class="form-check-label">Attivo</label></div>
@@ -54,3 +54,39 @@ $endValue=!empty($a->endDate)?substr(str_replace(' ','T',$a->endDate),0,16):'';
 <?php foreach(($a->activityLegs??[]) as $leg): ?><tr><td><?= (int)$leg->id ?></td><td><?=mfo_e($leg->departureIcao??'')?></td><td><?=mfo_e($leg->arrivalIcao??'')?></td><td><?=mfo_e($leg->flightNumber??'')?></td><td><a href="edit_leg.php?leg_id=<?=(int)$leg->id?>">Modifica</a></td></tr><?php endforeach; ?>
 </tbody></table></div></div></div></main>
 <?php include __DIR__.'/../includes/footer.php'; ?>
+
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@latest"></script>
+<script>
+(function () {
+  const holder = document.getElementById('editorJs');
+  const field = document.getElementById('mfoDescription');
+  const form = field && field.closest('form');
+  if (!holder || !field || !form) return;
+  if (typeof EditorJS === 'undefined') { holder.textContent = 'Editor non disponibile. Ricaricare la pagina.'; form.querySelector('[type=submit]').disabled = true; return; }
+  let data;
+  try { data = field.value ? JSON.parse(field.value) : undefined; } catch (_) { data = undefined; }
+  const editor = new EditorJS({holder: 'editorJs', data, tools: {
+    header: {class: Header, inlineToolbar: true},
+    list: {class: EditorjsList, inlineToolbar: true},
+    embed: Embed,
+    raw: RawTool
+  }});
+  let sending = false;
+  form.addEventListener('submit', async function (event) {
+    if (sending) return;
+    event.preventDefault();
+    try {
+      await editor.isReady;
+      const result = await editor.save();
+      if (!result.blocks || !result.blocks.length) { alert('Inserire una descrizione.'); return; }
+      field.value = JSON.stringify(result);
+      sending = true;
+      form.requestSubmit();
+    } catch (error) { alert('Impossibile salvare la descrizione: ' + error.message); }
+  });
+})();
+</script>
