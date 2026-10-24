@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['verify_clean_state'])) 
    if (!$legId || isset($remoteIds[$legId])) { $valid=false; break; }
    $remoteIds[$legId]=true;
   }
-  $check=$conn->prepare('SELECT activity_leg_id FROM voy_mfo_slots WHERE activity_id=? AND status_mfo<>'OBSOLETE'');
+  $check=$conn->prepare("SELECT activity_leg_id FROM voy_mfo_slots WHERE activity_id=? AND status_mfo<>'OBSOLETE'");
   if (!$valid || !$check) $error='Impossibile verificare tutte le tratte: blocco mantenuto';
   else {
    $check->bind_param('i',$id);
