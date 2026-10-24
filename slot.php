@@ -50,7 +50,7 @@ foreach (($activity->activityLegs ?? []) as $index => $leg) {
     $info = $slotRows[$legId];
     $state = strtoupper(trim((string)$info['status_mfo']));
     // Only statuses defined by MFO are interpreted; unknown states remain visible.
-    $priority = ['AVAILABLE' => 0, 'BOOKED' => 1, 'COMPLETED' => 2][$state] ?? 3;
+    $priority = ['BOOKED' => 0, 'AVAILABLE' => 1, 'COMPLETED' => 2][$state] ?? 3;
     $rows[] = ['leg' => $leg, 'info' => $info, 'state' => $state, 'priority' => $priority, 'order' => $index];
 }
 usort($rows, static function ($a, $b) {
