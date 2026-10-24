@@ -40,11 +40,26 @@ function mfo_leg_book(int $slotId, int $pilotId): bool {
         return $changed;
     })($slotId, $pilotId);
 }
+
+function mfo_leg_release_booking(int $slotId, int $pilotId): bool {
+    return (static function (int $slotId, int $pilotId): bool {
+        require __DIR__ . '/voy/secure_config/conn_voy.php';
+        if (!isset($conn) || !($conn instanceof mysqli)) throw new RuntimeException('Database VOY non disponibile');
+        $stmt = $conn->prepare("UPDATE voy_mfo_slots SET status_mfo='AVAILABLE', pilot_id=NULL, booked_at=NULL WHERE slot_id=? AND status_mfo='BOOKED' AND pilot_id=? AND bid_id IS NULL");
+        if (!$stmt) throw new RuntimeException('Rilascio slot non disponibile');
+        $stmt->bind_param('ii', $slotId, $pilotId);
+        if (!$stmt->execute()) { $stmt->close(); throw new RuntimeException('Rilascio slot fallito'); }
+        $changed = $stmt->affected_rows === 1;
+        $stmt->close();
+        return $changed;
+    })($slotId, $pilotId);
+}
 try { $mfoSlot = mfo_leg_slot((int)$legId); }
 catch (Throwable $e) { error_log('[slot_leg.php] '. $e->getMessage()); http_response_code(503); exit('Servizio MFO temporaneamente non disponibile'); }
 if (!$mfoSlot) { http_response_code(404); exit('Questa tratta non appartiene a un programma MFO'); }
 if (empty($_SESSION['mfo_leg_csrf'])) $_SESSION['mfo_leg_csrf'] = bin2hex(random_bytes(32));
 $mfoSyncWarning = false;
+$mfoBidUncertain = false;
 $settings = null;
 $limitDepatureLocation = false;
 $res = Api::sendSync('GET', 'v1/airline', null);
@@ -82,9 +97,24 @@ if (isset($_POST["btnbook"])) {
         http_response_code(409); exit('Slot MFO non più disponibile. Tornare alla Flight Board.');
     }
     if (!empty($_SESSION['pilotid'])) {
+        $pilotId = (int)$_SESSION['pilotid'];
+
+        // Atomic local reservation: only one request can move this slot
+        // from AVAILABLE to BOOKED.
+        try {
+            if (!mfo_leg_book($mfoSlot['slot_id'], $pilotId)) {
+                http_response_code(409);
+                exit('Slot MFO non più disponibile. Tornare alla Flight Board.');
+            }
+        } catch (Throwable $e) {
+            error_log('[slot_leg.php] Prenotazione atomica MFO fallita per slot '.$mfoSlot['slot_id'].': '.$e->getMessage());
+            http_response_code(503);
+            exit('Servizio MFO temporaneamente non disponibile');
+        }
+
         Api::__constructStatic();
         $data = [
-            'PilotId' => $_SESSION['pilotid'],
+            'PilotId' => $pilotId,
             'DepartureIcao' => empty($activity->departureIcao) ? "" : $activity->departureIcao,
             'ArrivalIcao' => empty($activity->arrivalIcao) ? "" : $activity->arrivalIcao,
             'TotalPax' => 0,
@@ -96,26 +126,40 @@ if (isset($_POST["btnbook"])) {
             'ActivityId' => $activity->activityId,
             'ActivityLegId' => $activity->id,
         ];
-        $res = Api::sendSync('POST', 'v1/bid', $data);
 
-        switch ($res->getStatusCode()) {
-            case 200:
+        try {
+            $res = Api::sendSync('POST', 'v1/bid', $data);
+            $httpStatus = $res->getStatusCode();
+
+            if ($httpStatus === 200) {
                 $status = "book-flight";
+            } elseif ($httpStatus === 400) {
+                // Explicit VaBase rejection: compensate the local reservation.
                 try {
-                    if (!mfo_leg_book($mfoSlot['slot_id'], (int)$_SESSION['pilotid'])) {
+                    if (!mfo_leg_release_booking($mfoSlot['slot_id'], $pilotId)) {
                         $mfoSyncWarning = true;
-                        error_log('[slot_leg.php] BID VaBase confermato ma slot MFO non aggiornato: '.$mfoSlot['slot_id']);
+                        error_log('[slot_leg.php] Rifiuto VaBase ma slot MFO non rilasciato: '.$mfoSlot['slot_id']);
                     }
                 } catch (Throwable $e) {
                     $mfoSyncWarning = true;
-                    error_log('[slot_leg.php] BID VaBase confermato, errore sincronizzazione slot '.$mfoSlot['slot_id'].': '.$e->getMessage());
+                    error_log('[slot_leg.php] Rifiuto VaBase, errore rilascio slot '.$mfoSlot['slot_id'].': '.$e->getMessage());
                 }
-                break;
-            case 400:
-            default:
                 $status = "book-flight-fail";
                 $responseMessage = $res->getBody();
-                break;
+            } else {
+                // Unknown outcome: do not release automatically, because VaBase
+                // may have created the BID even if the response is incomplete.
+                $mfoBidUncertain = true;
+                $status = "book-flight-fail";
+                $responseMessage = 'Esito della prenotazione VaBase non determinabile. Non ripetere il BOOK; contattare lo staff.';
+                error_log('[slot_leg.php] Esito VaBase incerto HTTP '.$httpStatus.' per slot '.$mfoSlot['slot_id']);
+            }
+        } catch (Throwable $e) {
+            // Timeout/transport failure: keep the slot reserved until reconciliation.
+            $mfoBidUncertain = true;
+            $status = "book-flight-fail";
+            $responseMessage = 'Esito della prenotazione VaBase non determinabile. Non ripetere il BOOK; contattare lo staff.';
+            error_log('[slot_leg.php] Esito VaBase incerto per slot '.$mfoSlot['slot_id'].': '.$e->getMessage());
         }
     }
 }
@@ -136,7 +180,8 @@ if (!empty($_SESSION['pilotid'])) {
 <section id="content" class="cp section offset-header">
     <div class="container">
         <div class="row">
-            <?php if ($mfoSyncWarning) { ?><div class="col-md-12"><div class="alert alert-warning">Il volo è stato prenotato in VaBase, ma lo stato MFO non è stato aggiornato. Non ripetere la prenotazione; contattare lo staff.</div></div><?php } ?>
+            <?php if ($mfoSyncWarning) { ?><div class="col-md-12"><div class="alert alert-warning">La sincronizzazione tra VaBase e MFO non è completa. Non ripetere la prenotazione; contattare lo staff.</div></div><?php } ?>
+            <?php if ($mfoBidUncertain) { ?><div class="col-md-12"><div class="alert alert-warning">Esito VaBase incerto: lo slot MFO resta riservato per evitare una doppia prenotazione. Non ripetere il BOOK; contattare lo staff.</div></div><?php } ?>
             <?php if (!empty($status)) { ?>
             <div class="col-md-12">
                 <?php if ($status == "book-flight") { ?>
