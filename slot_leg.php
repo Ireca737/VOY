@@ -54,6 +54,38 @@ function mfo_leg_release_booking(int $slotId, int $pilotId): bool {
         return $changed;
     })($slotId, $pilotId);
 }
+// Associate a confirmed VaBase BID without changing the booking workflow.
+function mfo_leg_link_bid(int $slotId, int $pilotId, int $legId): bool {
+    $res = Api::sendSync('GET', 'v1/bids', null);
+    if ($res->getStatusCode() !== 200) throw new RuntimeException('Elenco BID VaBase non disponibile');
+    $bids = json_decode((string)$res->getBody(), true);
+    if (!is_array($bids) || !array_is_list($bids)) throw new RuntimeException('Risposta BID VaBase non valida');
+    $matches = [];
+    foreach ($bids as $bid) {
+        if (!is_array($bid)) continue;
+        if ((int)($bid['pilotId'] ?? 0) === $pilotId
+            && (int)($bid['activityLegId'] ?? 0) === $legId
+            && ($bid['bidType'] ?? '') === 'activity'
+            && (int)($bid['id'] ?? 0) > 0) {
+            $matches[] = (int)$bid['id'];
+        }
+    }
+    if (count($matches) !== 1) throw new RuntimeException('BID corrispondente non univoco: '.count($matches));
+    $bidId = $matches[0];
+    return (static function () use ($slotId, $pilotId, $legId, $bidId): bool {
+        require __DIR__ . '/voy/secure_config/conn_voy.php';
+        if (!isset($conn) || !($conn instanceof mysqli)) throw new RuntimeException('Database VOY non disponibile');
+        $stmt = $conn->prepare("UPDATE voy_mfo_slots SET bid_id=? WHERE slot_id=? AND pilot_id=? AND activity_leg_id=? AND status_mfo='BOOKED' AND bid_id IS NULL");
+        if (!$stmt) throw new RuntimeException('Query associazione BID non disponibile');
+        $stmt->bind_param('iiii', $bidId, $slotId, $pilotId, $legId);
+        try {
+            if (!$stmt->execute()) throw new RuntimeException('Associazione BID fallita');
+            return $stmt->affected_rows === 1;
+        } finally {
+            $stmt->close();
+        }
+    })();
+}
 try { $mfoSlot = mfo_leg_slot((int)$legId); }
 catch (Throwable $e) { error_log('[slot_leg.php] '. $e->getMessage()); http_response_code(503); exit('Servizio MFO temporaneamente non disponibile'); }
 if (!$mfoSlot) { http_response_code(404); exit('Questa tratta non appartiene a un programma MFO'); }
@@ -134,6 +166,15 @@ if (isset($_POST["btnbook"])) {
 
             if ($httpStatus === 200) {
                 $status = "book-flight";
+                // A failed BID-ID sync must never invalidate a successful BOOK.
+                try {
+                    if (!mfo_leg_link_bid($mfoSlot['slot_id'], $pilotId, (int)$activity->id)) {
+                        throw new RuntimeException('Nessuna riga MFO aggiornata');
+                    }
+                } catch (Throwable $linkError) {
+                    $mfoSyncWarning = true;
+                    error_log('[slot_leg.php] BID creato, associazione MFO da verificare per slot '.$mfoSlot['slot_id'].': '.$linkError->getMessage());
+                }
             } elseif ($httpStatus === 400) {
                 // Explicit VaBase rejection: compensate the local reservation.
                 try {
