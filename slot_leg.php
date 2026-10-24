@@ -106,6 +106,7 @@ if (isset($_POST["btnbook"])) {
                 http_response_code(409);
                 exit('Slot MFO non più disponibile. Tornare alla Flight Board.');
             }
+            $mfoSlot['status_mfo'] = 'BOOKED';
         } catch (Throwable $e) {
             error_log('[slot_leg.php] Prenotazione atomica MFO fallita per slot '.$mfoSlot['slot_id'].': '.$e->getMessage());
             http_response_code(503);
@@ -139,6 +140,8 @@ if (isset($_POST["btnbook"])) {
                     if (!mfo_leg_release_booking($mfoSlot['slot_id'], $pilotId)) {
                         $mfoSyncWarning = true;
                         error_log('[slot_leg.php] Rifiuto VaBase ma slot MFO non rilasciato: '.$mfoSlot['slot_id']);
+                    } else {
+                        $mfoSlot['status_mfo'] = 'AVAILABLE';
                     }
                 } catch (Throwable $e) {
                     $mfoSyncWarning = true;
