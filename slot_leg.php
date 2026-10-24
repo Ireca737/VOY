@@ -67,17 +67,19 @@ function mfo_leg_link_bid(int $slotId, int $pilotId, int $legId): bool {
             && (int)($bid['activityLegId'] ?? 0) === $legId
             && ($bid['bidType'] ?? '') === 'activity'
             && (int)($bid['id'] ?? 0) > 0) {
-            $matches[] = (int)$bid['id'];
+            $matches[] = $bid;
         }
     }
     if (count($matches) !== 1) throw new RuntimeException('BID corrispondente non univoco: '.count($matches));
-    $bidId = $matches[0];
-    return (static function () use ($slotId, $pilotId, $legId, $bidId): bool {
+    $bidId = (int)$matches[0]['id'];
+    $callsign = trim((string)($matches[0]['callsign'] ?? ''));
+    if ($callsign === '') throw new RuntimeException('Callsign assente nel BID VaBase');
+    return (static function () use ($slotId, $pilotId, $legId, $bidId, $callsign): bool {
         require __DIR__ . '/voy/secure_config/conn_voy.php';
         if (!isset($conn) || !($conn instanceof mysqli)) throw new RuntimeException('Database VOY non disponibile');
-        $stmt = $conn->prepare("UPDATE voy_mfo_slots SET bid_id=? WHERE slot_id=? AND pilot_id=? AND activity_leg_id=? AND status_mfo='BOOKED' AND bid_id IS NULL");
+        $stmt = $conn->prepare("UPDATE voy_mfo_slots SET bid_id=?, callsign=? WHERE slot_id=? AND pilot_id=? AND activity_leg_id=? AND status_mfo='BOOKED' AND bid_id IS NULL");
         if (!$stmt) throw new RuntimeException('Query associazione BID non disponibile');
-        $stmt->bind_param('iiii', $bidId, $slotId, $pilotId, $legId);
+        $stmt->bind_param('isiii', $bidId, $callsign, $slotId, $pilotId, $legId);
         try {
             if (!$stmt->execute()) throw new RuntimeException('Associazione BID fallita');
             return $stmt->affected_rows === 1;
