@@ -13,7 +13,7 @@
 - Volo: `VY1101`, `LIPZ → LIRA`
 - BID osservato durante il test: `692776`
 - Fonti: `GET v1/bids`, `GET v1/map/acars`; campionamento della pagina diagnostica ogni 5 secondi.
-- Monitor web: `booktest01.php` (distribuito sul server dall'operatore; sorgente GitHub `booktest_ft01.php`).
+- Monitor web: `booktest01.php` generale (ACARS di tutti i piloti) e `booktest02.php` individuale (filtrato su `pilotId=14240`; sorgente GitHub `booktest_ft01.php`). Entrambi richiedono sessione autorizzata.
 
 ## Evidenze e cronologia
 
@@ -36,6 +36,25 @@ Snapshot condiviso in conversazione (non ancora archiviato come file JSON autono
 - Coordinate iniziali e posizione corrente coincidono.
 - **Conclusione circoscritta:** nello snapshot successivo a Start Flight il BID permane e lo stato passa da 0 a 1, mentre la sessione compare in ACARS. Il campionamento non dimostra simultaneità esatta.
 
+### T3 — Pushback, arresto e taxi (25 ottobre 2026)
+
+Snapshot forniti durante il collaudo: `pushback.json`, `pretaxi.json`, `taxing.json`. I file originali restano allegati alla conversazione; non sono ancora archiviati autonomamente nel repository.
+
+| Ora UTC | Osservazione | BID status | statStage | statSpeed | statAltitude | statHdg | actmpId |
+|---|---|---:|---|---:|---:|---:|---:|
+| 08:31:32 | Pushback in movimento | 1 | Taxiing | 2 | 10 | 224 | 1097445 |
+| 08:41:34 | Pushback concluso, aeromobile fermo | 1 | Boarding | 0 | 10 | 139 | 1097445 |
+| 08:45:34 | Taxi in movimento | 1 | Taxiing | 6 | 10 | 139 | 1097445 |
+
+- Il BID `692776` resta presente, con `status=1`, in tutti e tre i campioni.
+- Il `pilotId=14240`, il volo `VY1101` e la sessione `actmpId=1097445` restano invariati.
+- Le coordinate `presLat/presLong` cambiano fra i campioni.
+- **Sequenza osservata:** `Boarding → Taxiing → Boarding → Taxiing`.
+- **Interpretazione, non regola dimostrata:** il passaggio a `Boarding` sembra associato all'arresto, e il ritorno a `Taxiing` alla ripresa del movimento. Soglia e altre condizioni interne VaBase non sono note.
+- Lo snapshot `pushback.json` include anche un secondo volo, `BOX3S390` (`pilotId=81865`, `actmpId=1097448`), perché la prima versione del monitor non filtrava l'endpoint ACARS. Non è un secondo volo del pilota FT-01.
+- La versione individuale del monitor applica il filtro `pilotId=14240` lato PHP e confronta soltanto i dati operativi, evitando eventi fittizi dovuti a `duration_ms`.
+- **Implicazione VOYradar24:** una regressione di `statStage` non implica la creazione di un nuovo volo; lo stato LIVE dipende dall'esistenza della sessione ACARS, non dalla velocità istantanea.
+
 ## Interpretazione per VOYradar24
 
 1. **BOOKED ≠ LIVE.** Un MFO prenotato può essere presente sul tabellone senza una sessione ACARS.
@@ -48,7 +67,7 @@ Snapshot condiviso in conversazione (non ancora archiviato come file JSON autono
 
 | Fase | Evento | Timestamp UTC | Evidenza | Risultato |
 |---|---|---|---|---|
-| T3 | Taxi | — | — | In attesa |
+| T3 | Pushback / arresto / Taxi | 08:31:32 / 08:41:34 / 08:45:34 | `pushback.json`, `pretaxi.json`, `taxing.json` (allegati conversazione) | `Taxiing → Boarding → Taxiing`; BID e actmp invariati |
 | T4 | Takeoff / Climb | — | — | In attesa |
 | T5 | Cruise | — | — | In attesa |
 | T6 | Descent / Landing | — | — | In attesa |
