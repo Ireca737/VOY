@@ -126,6 +126,18 @@ Snapshot originale `ONGROUND.json` allegato alla conversazione.
 - **Conseguenza LIVE:** resta ON dopo il primo Taxiing, senza riattivare né sovrascrivere l'ATD. Nessuna chiusura ancora rilevata.
 - **Archiviazione:** JSON originale allegato alla conversazione, non ancora copiato nel repository.
 
+### T6-ter — Stop motori / Disembarking, 2026-10-25 10:19:34 UTC
+
+Snapshot originale `stopengine.json` allegato alla conversazione.
+
+- Il pilota segnala stop motori al parcheggio.
+- ACARS: `statStage=Disembarking`, `statSpeed=0`, `statAltitude=390`, `statHdg=268`, posizione `41.7897241329, 12.5974467155`.
+- BID `692776` ancora `status=1`; `actmpId=1097445` ancora presente: stop motori non chiude da solo la sessione.
+- `bids.arrivalIcao=LIRA`, `acars.arrIcao=LIRA`, `bids.alternateIcao=LIRN` anche dopo la modifica operativa a LIRF riferita dal pilota.
+- Sequenza campionata: `Descending` (09:44:24) → `Taxiing` (10:09:09, post-atterraggio) → `Disembarking` (10:19:34, stop motori). I tempi sono di acquisizione snapshot, non necessariamente i timestamp esatti delle transizioni.
+- **Conseguenza:** distinguere ON GROUND, sbarco/parcheggio e completamento effettivo con End Flight/PIREP. Il sensore LIVE progettato non si spegne per il solo `Disembarking`.
+- **Archiviazione:** JSON originale allegato alla conversazione, non ancora copiato nel repository.
+
 ## Interpretazione per VOYradar24
 
 1. **BOOKED ≠ LIVE.** Un MFO prenotato può essere presente sul tabellone senza una sessione ACARS.
