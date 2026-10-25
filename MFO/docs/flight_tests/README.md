@@ -83,6 +83,17 @@ Snapshot originale allegato alla conversazione: `stable1000ft.json` (nome fornit
 - **Limite:** un singolo snapshot non stabilisce la logica di transizione a `Cruising`; quota pianificata nel BID `29000`.
 - **Archiviazione:** JSON originale allegato alla conversazione, non ancora copiato nel repository.
 
+### T5-bis — Livellamento confermato / In-flight, 2026-10-25 09:07:24 UTC
+
+Snapshot originale allegato alla conversazione: `stable10000_2.json`.
+
+- ACARS: `statStage=In-flight`, `statAltitude=9970`, `statSpeed=235`, `statHdg=204`.
+- Il campione precedente, alle 09:04:54 UTC, mostrava `Climbing` a quota `9960` e velocità `237`.
+- `actmpId=1097445` e `bid_id=692776` con `status=1` invariati.
+- **Conclusione:** VaBase può indicare `In-flight` a circa 10.000 ft, ben prima della quota pianificata di 29.000 ft.
+- **Ipotesi da verificare:** lo stato verticale potrebbe dipendere dalla variazione di quota/rateo verticale e da una media o latenza; i campioni non dimostrano lettura diretta del beccheggio né consentono di ricavare soglie o algoritmo.
+- **Implicazione:** per VOYradar24 evitare di trattare `Climbing`, `Descending` e `In-flight` come transizioni irreversibili.
+
 ## Interpretazione per VOYradar24
 
 1. **BOOKED ≠ LIVE.** Un MFO prenotato può essere presente sul tabellone senza una sessione ACARS.
@@ -97,7 +108,7 @@ Snapshot originale allegato alla conversazione: `stable1000ft.json` (nome fornit
 |---|---|---|---|---|
 | T3 | Pushback / arresto / Taxi | 08:31:32 / 08:41:34 / 08:45:34 | `pushback.json`, `pretaxi.json`, `taxing.json` (allegati conversazione) | `Taxiing → Boarding → Taxiing`; BID e actmp invariati |
 | T4 | Allineamento / Takeoff / Climb | 08:57:44 / 08:58:04 / 08:58:29 | Tre snapshot `voy-ft01-snapshot-*.json` (allegati conversazione) | `Boarding → Climbing`, BID e actmp invariati |
-| T5 | Livellamento intermedio ~10.000 ft | 09:04:54 | `stable1000ft.json` (allegato conversazione) | ACARS ancora `Climbing`, BID 1, actmp invariato |
+| T5 | Livellamento intermedio ~10.000 ft | 09:04:54 / 09:07:24 | `stable1000ft.json`, `stable10000_2.json` (allegati conversazione) | `Climbing → In-flight`, BID 1, actmp invariato |
 | T6 | Descent / Landing | — | — | In attesa |
 | T7 | END FLIGHT | — | — | In attesa |
 | T8 | +2 / +5 / +15 min | — | — | In attesa |
