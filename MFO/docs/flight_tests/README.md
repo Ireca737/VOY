@@ -72,6 +72,17 @@ Tre snapshot originali allegati alla conversazione, acquisiti tramite monitor in
 - **Conseguenza:** non derivare la fase reale di volo dal solo `statStage` senza conoscere la logica VaBase.
 - **Archiviazione:** i tre JSON sono conservati come allegati originali alla conversazione; il README registra i loro nomi, ma non li presenta falsamente come file già caricati nel repository.
 
+### T5 — Livellamento intermedio a circa 10.000 ft, 2026-10-25 09:04:54 UTC
+
+Snapshot originale allegato alla conversazione: `stable1000ft.json` (nome fornito; quota dichiarata dal pilota: 10.000 piedi).
+
+- `v1/bids`: HTTP 200, BID `692776`, `status=1`, `activityLegId=42670`.
+- `v1/map/acars`: HTTP 200, `pilotId=14240`, `actmpId=1097445`, `statStage=Climbing`, `statSpeed=237`, `statAltitude=9960`, `statHdg=204`.
+- Posizione: `presLat=45.2617229386`, `presLong=12.3993220956`.
+- **Osservazione:** il pilota riferisce volo stabilizzato a circa 10.000 ft, ma l'API riporta ancora `Climbing`.
+- **Limite:** un singolo snapshot non stabilisce la logica di transizione a `Cruising`; quota pianificata nel BID `29000`.
+- **Archiviazione:** JSON originale allegato alla conversazione, non ancora copiato nel repository.
+
 ## Interpretazione per VOYradar24
 
 1. **BOOKED ≠ LIVE.** Un MFO prenotato può essere presente sul tabellone senza una sessione ACARS.
@@ -86,7 +97,7 @@ Tre snapshot originali allegati alla conversazione, acquisiti tramite monitor in
 |---|---|---|---|---|
 | T3 | Pushback / arresto / Taxi | 08:31:32 / 08:41:34 / 08:45:34 | `pushback.json`, `pretaxi.json`, `taxing.json` (allegati conversazione) | `Taxiing → Boarding → Taxiing`; BID e actmp invariati |
 | T4 | Allineamento / Takeoff / Climb | 08:57:44 / 08:58:04 / 08:58:29 | Tre snapshot `voy-ft01-snapshot-*.json` (allegati conversazione) | `Boarding → Climbing`, BID e actmp invariati |
-| T5 | Cruise | — | — | In attesa |
+| T5 | Livellamento intermedio ~10.000 ft | 09:04:54 | `stable1000ft.json` (allegato conversazione) | ACARS ancora `Climbing`, BID 1, actmp invariato |
 | T6 | Descent / Landing | — | — | In attesa |
 | T7 | END FLIGHT | — | — | In attesa |
 | T8 | +2 / +5 / +15 min | — | — | In attesa |
