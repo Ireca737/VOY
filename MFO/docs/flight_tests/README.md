@@ -114,6 +114,18 @@ Snapshot originale `descending.json` allegato alla conversazione.
 - **Continuità:** stesso BID e stessa sessione ACARS, nessuna evidenza di chiusura. Il sensore LIVE progettato rimane ON dopo il primo Taxiing.
 - **Archiviazione:** JSON originale allegato alla conversazione, non ancora copiato nel repository.
 
+### T6-bis — A terra dopo atterraggio, rullaggio al gate, 2026-10-25 10:09:09 UTC
+
+Snapshot originale `ONGROUND.json` allegato alla conversazione.
+
+- Pilota riferisce atterraggio completato e rullaggio verso il gate.
+- ACARS: `statStage=Taxiing`, `statSpeed=14`, `statAltitude=390`, `statHdg=158`, `presLat=41.7913991008`, `presLong=12.600095178`.
+- Identificativi invariati: `actmpId=1097445`, BID `692776`, `status=1`.
+- `bids.arrivalIcao=LIRA`, `acars.arrIcao=LIRA`, `bids.alternateIcao=LIRN`. Il cambio a LIRF discusso prima non risulta nei dati di questo campione; non è noto se sia stato confermato in VaBase.
+- **Osservazione:** `Taxiing` ricompare dopo l'atterraggio; da solo non distingue rullaggio di partenza e rullaggio di arrivo.
+- **Conseguenza LIVE:** resta ON dopo il primo Taxiing, senza riattivare né sovrascrivere l'ATD. Nessuna chiusura ancora rilevata.
+- **Archiviazione:** JSON originale allegato alla conversazione, non ancora copiato nel repository.
+
 ## Interpretazione per VOYradar24
 
 1. **BOOKED ≠ LIVE.** Un MFO prenotato può essere presente sul tabellone senza una sessione ACARS.
