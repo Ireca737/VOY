@@ -138,6 +138,16 @@ Snapshot originale `stopengine.json` allegato alla conversazione.
 - **Conseguenza:** distinguere ON GROUND, sbarco/parcheggio e completamento effettivo con End Flight/PIREP. Il sensore LIVE progettato non si spegne per il solo `Disembarking`.
 - **Archiviazione:** JSON originale allegato alla conversazione, non ancora copiato nel repository.
 
+### T6-quater — Verifica prima di End Flight, 2026-10-25 10:25:52 UTC
+
+Snapshot `voy-ft01-snapshot-1792923958467.json` allegato alla conversazione. Dopo almeno 6 minuti in `Disembarking` (AL GATE), pulsante End Flight disponibile ma non premuto:
+
+- BID `692776` invariato: `status=1`, `arrivalIcao=LIRA`, `alternateIcao=LIRN`, `activityLegId=42670`.
+- ACARS ancora presente: `actmpId=1097445`, `statStage=Disembarking`, velocità `0`, quota `390`, prua `268`, `arrIcao=LIRA`.
+- Nessuna propagazione osservata della destinazione operativa LIRF modificata nel client VaBase.
+- **Esito:** ingresso e permanenza in Disembarking non chiudono automaticamente il BID né la sessione ACARS; attendere End Flight e successivo PIREP.
+- Snapshot originale disponibile come allegato, non copiato nel repository.
+
 ## Interpretazione per VOYradar24
 
 1. **BOOKED ≠ LIVE.** Un MFO prenotato può essere presente sul tabellone senza una sessione ACARS.
