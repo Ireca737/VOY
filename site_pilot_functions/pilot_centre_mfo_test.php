@@ -212,23 +212,30 @@ if (!empty($latestFlight) && !empty($latestFlight->date)) {
         </div>
         <!-- VOY MFO: compact active programs, same source as slots.php -->
         <style>
-            .voy-mfo-grid { display:flex; flex-wrap:wrap; gap:12px; }
+            .voy-mfo-grid { display:flex; flex-wrap:wrap; gap:14px; }
             .voy-mfo-card.activity-card-container {
-                float:none; display:block; flex:0 0 145px;
-                width:145px; height:105px; margin:0;
-                position:relative; background-size:cover; background-position:center;
-                border-radius:5px; overflow:hidden; cursor:pointer;
+                float:none; display:block; flex:0 0 150px;
+                width:150px; height:300px; margin:0;
+                position:relative; background:#4685d2 url('/images/mfo.jpg') center / 100% 100% no-repeat;
+                border-radius:3px; overflow:hidden; cursor:pointer;
+                box-shadow:0 2px 7px rgba(0,0,0,.2);
             }
             .voy-mfo-card .voy-mfo-title {
-                position:absolute; left:0; right:0; bottom:0;
-                padding:6px 8px; background:rgba(0,0,0,.76);
-                color:#fff; font-size:12px; font-weight:600;
-                line-height:1.25; overflow-wrap:anywhere;
+                position:absolute; top:10px; left:8px; right:8px;
+                color:#fff; font-size:14px; font-weight:700;
+                line-height:1.15; text-align:center; overflow-wrap:anywhere;
+                text-shadow:0 1px 3px rgba(0,0,0,.75);
             }
-            .voy-mfo-card a { color:#fff; text-decoration:none; }
-            .voy-mfo-card a:hover { color:#fff; text-decoration:underline; }
+            .voy-mfo-card .voy-mfo-dates {
+                position:absolute; bottom:6px; right:7px; left:7px;
+                color:#112c4a; font-size:10px; font-weight:700;
+                line-height:1.25; text-align:right;
+                text-shadow:0 1px 2px rgba(255,255,255,.9);
+            }
+            .voy-mfo-card a { color:inherit; text-decoration:none; }
+            .voy-mfo-card a:hover { color:inherit; text-decoration:underline; }
             @media(max-width:480px) {
-                .voy-mfo-card.activity-card-container { flex-basis:calc(50% - 6px); width:calc(50% - 6px); }
+                .voy-mfo-card.activity-card-container { flex-basis:calc(50% - 7px); width:calc(50% - 7px); height:auto; aspect-ratio:1 / 2; }
             }
         </style>
         <div class="row">
@@ -246,15 +253,25 @@ if (!empty($latestFlight) && !empty($latestFlight->date)) {
                                     }
                                     $hasMfoPrograms = true;
                                     $slotUrl = website_base_url . 'slot.php?id=' . (int)$activity->id;
-                                    $bannerUrl = website_base_url . 'uploads/activities/' . rawurlencode((string)($activity->banner ?? ''));
+                                    $startRaw = (string)($activity->startDate ?? '');
+                                    $endRaw = (string)($activity->endDate ?? '');
+                                    $startTs = $startRaw !== '' ? strtotime($startRaw) : false;
+                                    $endTs = $endRaw !== '' ? strtotime($endRaw) : false;
                                     ?>
                                     <div class="activity-card-container voy-mfo-card"
-                                         data-sloturl="<?php echo htmlspecialchars($slotUrl, ENT_QUOTES, 'UTF-8'); ?>"
-                                         style="background-image:url('<?php echo htmlspecialchars($bannerUrl, ENT_QUOTES, 'UTF-8'); ?>');">
+                                         data-sloturl="<?php echo htmlspecialchars($slotUrl, ENT_QUOTES, 'UTF-8'); ?>">
                                         <div class="voy-mfo-title">
                                             <a href="<?php echo htmlspecialchars($slotUrl, ENT_QUOTES, 'UTF-8'); ?>">
                                                 <?php echo htmlspecialchars((string)$activity->title, ENT_QUOTES, 'UTF-8'); ?>
                                             </a>
+                                        </div>
+                                        <div class="voy-mfo-dates">
+                                            <?php if ($startTs !== false) { ?>
+                                                DAL <?php echo htmlspecialchars(strtoupper(date('d M Y', $startTs)), ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php } ?>
+                                            <?php if ($endTs !== false) { ?>
+                                                <div>AL <?php echo htmlspecialchars(strtoupper(date('d M Y', $endTs)), ENT_QUOTES, 'UTF-8'); ?></div>
+                                            <?php } ?>
                                         </div>
                                     </div>
                                 <?php }
