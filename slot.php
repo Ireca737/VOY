@@ -45,7 +45,7 @@ try {
         $check->close();
         if (!$found) { http_response_code(404); exit('Programma MFO non trovato'); }
         if ($pilotId > 0 && $activeBidIds !== null) {
-            $booked = $conn->prepare("SELECT slot_id, bid_id FROM voy_mfo_slots WHERE activity_id=? AND pilot_id=? AND status_mfo='BOOKED' AND bid_id IS NOT NULL AND actmp_id IS NULL AND pirep_id IS NULL");
+            $booked = $conn->prepare("SELECT slot_id, bid_id FROM voy_mfo_slots WHERE activity_id=? AND pilot_id=? AND status_mfo='BOOKED' AND bid_id IS NOT NULL AND completed_at IS NULL");
             if (!$booked) throw new RuntimeException('Controllo BID MFO non disponibile');
             $booked->bind_param('ii', $activityId, $pilotId);
             $booked->execute();
@@ -56,7 +56,7 @@ try {
             }
             $booked->close();
             if ($missing) {
-                $release = $conn->prepare("UPDATE voy_mfo_slots SET status_mfo='AVAILABLE', pilot_id=NULL, callsign=NULL, bid_id=NULL, booked_at=NULL WHERE slot_id=? AND activity_id=? AND pilot_id=? AND bid_id=? AND status_mfo='BOOKED' AND actmp_id IS NULL AND pirep_id IS NULL");
+                $release = $conn->prepare("UPDATE voy_mfo_slots SET status_mfo='AVAILABLE', pilot_id=NULL, callsign=NULL, bid_id=NULL, actmp_id=NULL, status_flight=NULL, booked_at=NULL WHERE slot_id=? AND activity_id=? AND pilot_id=? AND bid_id=? AND status_mfo='BOOKED' AND completed_at IS NULL");
                 if (!$release) throw new RuntimeException('Rilascio BID MFO non disponibile');
                 foreach ($missing as [$missingSlotId, $missingBidId]) {
                     $release->bind_param('iiii', $missingSlotId, $activityId, $pilotId, $missingBidId);
