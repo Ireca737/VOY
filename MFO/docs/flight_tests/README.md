@@ -94,6 +94,15 @@ Snapshot originale allegato alla conversazione: `stable10000_2.json`.
 - **Ipotesi da verificare:** lo stato verticale potrebbe dipendere dalla variazione di quota/rateo verticale e da una media o latenza; i campioni non dimostrano lettura diretta del beccheggio né consentono di ricavare soglie o algoritmo.
 - **Implicazione:** per VOYradar24 evitare di trattare `Climbing`, `Descending` e `In-flight` come transizioni irreversibili.
 
+### T5-ter — Ripresa salita verso FL290, 2026-10-25 09:11:34 UTC
+
+Snapshot originale `climb.json` allegato alla conversazione.
+
+- ACARS: `statStage=Climbing`, `statAltitude=10190`, `statSpeed=274`, `statHdg=195`; `presLat=44.8237759573`, `presLong=12.1926090547`.
+- BID `692776` ancora `status=1`; `actmpId=1097445` invariato.
+- Sequenza verificata sul medesimo volo: `Climbing` (09:04:54, quota 9960) → `In-flight` (09:07:24, quota 9970) → `Climbing` (09:11:34, quota 10190).
+- **Conferma operativa:** `statStage` non è una progressione monotona; può tornare a `Climbing` quando il pilota riprende la salita. Non è ancora noto l'algoritmo VaBase.
+
 ## Interpretazione per VOYradar24
 
 1. **BOOKED ≠ LIVE.** Un MFO prenotato può essere presente sul tabellone senza una sessione ACARS.
