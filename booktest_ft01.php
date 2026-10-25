@@ -47,6 +47,15 @@ if (isset($_GET['data'])) {
             ];
         }
     }
+    // Restrict diagnostic payload to the authenticated test pilot, server-side.
+    foreach (['bids', 'acars'] as $sourceName) {
+        if (isset($result['sources'][$sourceName]['data']) && is_array($result['sources'][$sourceName]['data'])) {
+            $items = $result['sources'][$sourceName]['data'];
+            $result['sources'][$sourceName]['data'] = array_values(array_filter($items, static function ($item) {
+                return is_array($item) && isset($item['pilotId']) && (int)$item['pilotId'] === 14240;
+            }));
+        }
+    }
     echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
     exit;
 }
@@ -158,7 +167,7 @@ async function sample() {
       const src=data.sources?.[name], prev=last?.sources?.[name];
       renderSource(name,src,prev);
       if(last) {
-        const before=flattened(prev??{}), after=flattened(src??{});
+        const before=flattened(prev?.data??null), after=flattened(src?.data??null);
         for(const key of new Set([...Object.keys(before),...Object.keys(after)])) {
           if(before[key]!==after[key]) appendEvent(name+'.'+key+': '+(before[key]??'[assente]')+' → '+(after[key]??'[assente]'),stamp);
         }
