@@ -160,6 +160,18 @@ Snapshot `voy-ft01-snapshot-1792924089874.json` allegato alla conversazione:
 - Programmare osservazioni +2/+5/+10/+15 minuti, verificando anche PIREP e slot MFO.
 - Screenshot e JSON allegati alla conversazione, non copiati nel repository.
 
+### T7-bis — Registro eventi di chiusura, 2026-10-25 10:28:44–10:29:14 UTC
+
+Registro `voy-ft01-events-1792924210250.json` allegato alla conversazione, monitor con polling ogni 5 secondi. Il pilota riferisce circa 30 secondi di attesa dopo conferma OK sul popup PIREP Received.
+
+- **10:28:44 UTC:** prima acquisizione eventi di BID e ACARS; i dati sono presenti.
+- **10:29:09 UTC:** `v1/map/acars` passa da sessione `actmpId=1097445`, `statStage=Disembarking`, a `data=[]`.
+- **10:29:14 UTC:** `v1/bids` passa da BID `692776`, `status=1`, a `data=[]`.
+- Differenza osservata tra le due acquisizioni: **5 secondi**, pari al polling; non prova necessariamente una differenza di 5 secondi nell'aggiornamento lato server.
+- Non è stato rilevato un valore BID `status` intermedio; il record non è più restituito.
+- **Da verificare separatamente:** PIREP processato, destinazione LIRF, collegamento `pirep_id`, stato dello slot MFO e bonus. La scomparsa non prova completamento amministrativo.
+- File JSON del registro disponibile come allegato alla conversazione, non copiato nel repository.
+
 ## Interpretazione per VOYradar24
 
 1. **BOOKED ≠ LIVE.** Un MFO prenotato può essere presente sul tabellone senza una sessione ACARS.
