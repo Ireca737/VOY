@@ -148,6 +148,18 @@ Snapshot `voy-ft01-snapshot-1792923958467.json` allegato alla conversazione. Dop
 - **Esito:** ingresso e permanenza in Disembarking non chiudono automaticamente il BID né la sessione ACARS; attendere End Flight e successivo PIREP.
 - Snapshot originale disponibile come allegato, non copiato nel repository.
 
+### T7 — End Flight / PIREP Received, snapshot 2026-10-25 10:28:04 UTC
+
+Il pilota ha premuto End Flight. Screenshot VaBase: popup **PIREP Received** con conferma di ricezione e avviso che l'elaborazione può richiedere **fino a 10 minuti**; interfaccia ancora in `Disembarking`.
+
+Snapshot `voy-ft01-snapshot-1792924089874.json` allegato alla conversazione:
+- `v1/bids`: BID `692776` ancora presente, `status=1`, `arrivalIcao=LIRA`, `alternateIcao=LIRN`.
+- `v1/map/acars`: sessione `actmpId=1097445` ancora presente, `statStage=Disembarking`, `statSpeed=0`, `arrIcao=LIRA`.
+- Modifica destinazione a LIRF nel client non riscontrata negli endpoint osservati a questo istante.
+- **Interpretazione:** ricezione PIREP confermata dall'interfaccia; elaborazione definitiva e sincronizzazione BID/ACARS ancora da verificare. Non equiparare ricezione PIREP a completamento DB o rimozione ACARS.
+- Programmare osservazioni +2/+5/+10/+15 minuti, verificando anche PIREP e slot MFO.
+- Screenshot e JSON allegati alla conversazione, non copiati nel repository.
+
 ## Interpretazione per VOYradar24
 
 1. **BOOKED ≠ LIVE.** Un MFO prenotato può essere presente sul tabellone senza una sessione ACARS.
