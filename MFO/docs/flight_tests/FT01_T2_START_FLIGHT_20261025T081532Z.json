@@ -1,0 +1,74 @@
+{
+  "timestamp_utc": "2026-10-25T08:15:32+00:00",
+  "sources": {
+    "bids": {
+      "http": 200,
+      "duration_ms": 30,
+      "valid_json": true,
+      "data": [
+        {
+          "id": 692776,
+          "dateBooked": "2026-10-25T07:50:03",
+          "departureIcao": "LIPZ",
+          "arrivalIcao": "LIRA",
+          "totalPax": 130,
+          "route": "CHI7L CHI DCT EKTUK DCT GAVRA DCT OKBIS DCT GITOD GITO4F",
+          "flightNumber": "VY1101",
+          "aircraft": "B737",
+          "aircraftReg": "",
+          "cargo": 8746,
+          "bidType": "activity",
+          "departureCity": null,
+          "arrivalCity": null,
+          "departureTime": null,
+          "arrivalTime": null,
+          "duration": null,
+          "comments": null,
+          "status": 1,
+          "activityLegId": 42670,
+          "scheduleId": null,
+          "airportInfo": null,
+          "profileImage": "20240318095037.png",
+          "name": "Renato Ireca",
+          "callsign": "VOY1968",
+          "pilotId": 14240,
+          "sbDispatched": true,
+          "sbOfpId": "1792914649_D073699F65",
+          "altitude": 29000,
+          "fleetAircraft": null,
+          "alternateIcao": "LIRN"
+        }
+      ],
+      "raw": null
+    },
+    "acars": {
+      "http": 200,
+      "duration_ms": 6,
+      "valid_json": true,
+      "data": [
+        {
+          "flightNumber": "VY1101",
+          "pilotId": 14240,
+          "callsign": "VOY1968",
+          "name": "Renato Ireca",
+          "nameShort": "Renato",
+          "statSpeed": 0,
+          "statAltitude": 0,
+          "statHdg": 0,
+          "depIcao": "LIPZ",
+          "arrIcao": "LIRA",
+          "startLat": 45.5036194374,
+          "startLong": 12.3418388499,
+          "presLat": 45.5036194374,
+          "presLong": 12.3418388499,
+          "arrLat": 41.79944229125977,
+          "arrLong": 12.59722900390625,
+          "statStage": "Boarding",
+          "aircraftTypeId": "Prosim_B738 2023 KLM - Scimitar Winglets",
+          "actmpId": 1097445
+        }
+      ],
+      "raw": null
+    }
+  }
+}
