@@ -65,36 +65,6 @@ $res = Api::sendSync('GET', 'v1/activities/active-lite', null);
 if ($res->getStatusCode() == 200) {
     $activities = json_decode($res->getBody(), false);
 }
-// VOY MFO: exclude dedicated MFO events from Upcoming Events.
-// Keep the VOY database include isolated from VaBase page variables.
-try {
-    $mfoActivityIds = (static function (): array {
-        require __DIR__ . '/../voy/secure_config/conn_voy.php';
-        if (!isset($conn) || !($conn instanceof mysqli)) {
-            throw new RuntimeException('Connessione VOY non disponibile');
-        }
-        $ids = [];
-        $result = $conn->query('SELECT activity_id FROM voy_mfo_programs');
-        if ($result === false) {
-            throw new RuntimeException('Elenco programmi MFO non disponibile');
-        }
-        while ($row = $result->fetch_assoc()) {
-            $ids[(int)$row['activity_id']] = true;
-        }
-        $result->free();
-        return $ids;
-    })();
-    if (is_array($activities)) {
-        $activities = array_values(array_filter($activities, static function ($activity) use ($mfoActivityIds) {
-            return !($activity->type === 'Event' && isset($mfoActivityIds[(int)$activity->id]));
-        }));
-    }
-} catch (Throwable $e) {
-    error_log('[pilot_centre.php] Filtro MFO non disponibile: ' . get_class($e));
-    http_response_code(503);
-    exit('Elenco attività temporaneamente non disponibile.');
-}
-
 $suggestedFlights = null;
 $res = Api::sendSync('GET', 'v1/operations/schedule/suggested', null);
 if ($res->getStatusCode() == 200) {
@@ -335,9 +305,29 @@ if (!empty($latestFlight) && !empty($latestFlight->date)) {
                     <div class="panel-body">
                         <?php if (!empty($activities)) { ?>
                             <?php
+                            // VOY MFO: the news widget has already loaded conn_voy.php
+                            // in this page scope. Reuse its connection without another include.
+                            $mfoActivityIds = [];
+                            try {
+                                if (!isset($conn) || !($conn instanceof mysqli)) {
+                                    throw new RuntimeException('Connessione VOY non disponibile');
+                                }
+                                $mfoResult = $conn->query('SELECT activity_id FROM voy_mfo_programs');
+                                if ($mfoResult === false) {
+                                    throw new RuntimeException('Elenco programmi MFO non disponibile');
+                                }
+                                while ($mfoRow = $mfoResult->fetch_assoc()) {
+                                    $mfoActivityIds[(int)$mfoRow['activity_id']] = true;
+                                }
+                                $mfoResult->free();
+                            } catch (Throwable $e) {
+                                error_log('[pilot_centre.php] Filtro MFO: ' . $e->getMessage());
+                                // Fail closed: never expose MFO activities when lookup fails.
+                                $activities = [];
+                            }
                             $noEvents = true;
                             foreach ($activities as $key => $activity) {
-                                if ($activity->type == "Event") {
+                                if ($activity->type == "Event" && !isset($mfoActivityIds[(int)$activity->id])) {
                                     $noEvents = false; ?>
                                     <div class="activity-card-container" data-activityid="<?php echo $activity->id; ?>"
                                         style="background-image:url(<?php echo website_base_url; ?>uploads/activities/<?php echo $activity->banner; ?>);background-color:#ccc;">
