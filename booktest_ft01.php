@@ -136,7 +136,7 @@ function renderSource(name, source, previous) {
   status.className=ok?'ok':'bad';
   raw.textContent=source ? fmt(source) : 'Nessuna risposta';
   fields.replaceChildren();
-  const current=flatten(source?.data ?? null), old=flatten(previous?.data ?? null);
+  const current=flattened(source?.data ?? null), old=flattened(previous?.data ?? null);
   const table=document.createElement('table'), tbody=document.createElement('tbody');
   for(const [key,val] of Object.entries(current)) {
     const tr=document.createElement('tr');
@@ -158,7 +158,7 @@ async function sample() {
       const src=data.sources?.[name], prev=last?.sources?.[name];
       renderSource(name,src,prev);
       if(last) {
-        const before=flatten(prev??{}), after=flatten(src??{});
+        const before=flattened(prev??{}), after=flattened(src??{});
         for(const key of new Set([...Object.keys(before),...Object.keys(after)])) {
           if(before[key]!==after[key]) appendEvent(name+'.'+key+': '+(before[key]??'[assente]')+' → '+(after[key]??'[assente]'),stamp);
         }
