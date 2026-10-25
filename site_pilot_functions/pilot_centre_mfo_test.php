@@ -214,8 +214,8 @@ if (!empty($latestFlight) && !empty($latestFlight->date)) {
         <style>
             .voy-mfo-grid { display:flex; flex-wrap:wrap; gap:14px; }
             .voy-mfo-card.activity-card-container {
-                float:none; display:block; flex:0 0 207px;
-                width:207px; height:300px; margin:0;
+                float:none; display:block; flex:0 0 210px;
+                width:210px; height:300px; margin:0;
                 position:relative; background:#4685d2 url('/images/mfo.jpg') center / 100% 100% no-repeat;
                 border-radius:3px; overflow:hidden; cursor:pointer;
                 box-shadow:0 2px 7px rgba(0,0,0,.2);
@@ -235,7 +235,7 @@ if (!empty($latestFlight) && !empty($latestFlight->date)) {
             .voy-mfo-card a { color:inherit; text-decoration:none; }
             .voy-mfo-card a:hover { color:inherit; text-decoration:underline; }
             @media(max-width:480px) {
-                .voy-mfo-card.activity-card-container { flex-basis:calc(50% - 7px); width:calc(50% - 7px); height:auto; aspect-ratio:207 / 300; }
+                .voy-mfo-card.activity-card-container { flex-basis:calc(50% - 7px); width:calc(50% - 7px); height:auto; aspect-ratio:7 / 10; }
             }
         </style>
         <div class="row">
