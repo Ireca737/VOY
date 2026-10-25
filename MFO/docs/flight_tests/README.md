@@ -103,6 +103,17 @@ Snapshot originale `climb.json` allegato alla conversazione.
 - Sequenza verificata sul medesimo volo: `Climbing` (09:04:54, quota 9960) → `In-flight` (09:07:24, quota 9970) → `Climbing` (09:11:34, quota 10190).
 - **Conferma operativa:** `statStage` non è una progressione monotona; può tornare a `Climbing` quando il pilota riprende la salita. Non è ancora noto l'algoritmo VaBase.
 
+### T6 — Inizio discesa, 2026-10-25 09:44:24 UTC
+
+Snapshot originale `descending.json` allegato alla conversazione.
+
+- `v1/bids`: HTTP 200, BID `692776`, `status=1`, quota pianificata `29000`.
+- `v1/map/acars`: HTTP 200, `statStage=Descending`, `statAltitude=19670`, `statSpeed=313`, `statHdg=302`.
+- Posizione `presLat=42.4244402043`, `presLong=13.1393653679`; `actmpId=1097445`, `pilotId=14240`.
+- Il pilota aveva scelto FL220 come quota di crociera effettiva; questa differisce dal campo pianificato nel BID.
+- **Continuità:** stesso BID e stessa sessione ACARS, nessuna evidenza di chiusura. Il sensore LIVE progettato rimane ON dopo il primo Taxiing.
+- **Archiviazione:** JSON originale allegato alla conversazione, non ancora copiato nel repository.
+
 ## Interpretazione per VOYradar24
 
 1. **BOOKED ≠ LIVE.** Un MFO prenotato può essere presente sul tabellone senza una sessione ACARS.
