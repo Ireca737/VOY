@@ -55,6 +55,23 @@ Snapshot forniti durante il collaudo: `pushback.json`, `pretaxi.json`, `taxing.j
 - La versione individuale del monitor applica il filtro `pilotId=14240` lato PHP e confronta soltanto i dati operativi, evitando eventi fittizi dovuti a `duration_ms`.
 - **Implicazione VOYradar24:** una regressione di `statStage` non implica la creazione di un nuovo volo; lo stato LIVE dipende dall'esistenza della sessione ACARS, non dalla velocità istantanea.
 
+### T4 — Allineamento e decollo (25 ottobre 2026)
+
+Tre snapshot originali allegati alla conversazione, acquisiti tramite monitor individuale `booktest02.php`:
+
+| Ora UTC | File originale | statStage | statSpeed | statAltitude | statHdg |
+|---|---|---|---:|---:|---:|
+| 08:57:44 | `voy-ft01-snapshot-1792918669401.json` | Boarding | 0 | 10 | 47 |
+| 08:58:04 | `voy-ft01-snapshot-1792918686617.json` | Boarding | 0 | 10 | 47 |
+| 08:58:29 | `voy-ft01-snapshot-1792918712593.json` | Climbing | 233 | 820 | 46 |
+
+- In tutti i campioni: `bid_id=692776`, `bids.status=1`, `actmpId=1097445`, `pilotId=14240`, volo `VY1101`.
+- Fra le 08:58:04 e le 08:58:29 UTC compare il passaggio da `Boarding` a `Climbing`; non è possibile escludere stati intermedi non acquisiti.
+- Lo stato `Boarding` permane nei due campioni con velocità 0 anche dopo l'allineamento in pista, secondo l'osservazione operativa del pilota.
+- La posizione cambia nel campione `Climbing`; i valori di velocità e quota sono quelli restituiti dall'API, senza attribuire unità non dichiarate nel payload.
+- **Conseguenza:** non derivare la fase reale di volo dal solo `statStage` senza conoscere la logica VaBase.
+- **Archiviazione:** i tre JSON sono conservati come allegati originali alla conversazione; il README registra i loro nomi, ma non li presenta falsamente come file già caricati nel repository.
+
 ## Interpretazione per VOYradar24
 
 1. **BOOKED ≠ LIVE.** Un MFO prenotato può essere presente sul tabellone senza una sessione ACARS.
@@ -68,7 +85,7 @@ Snapshot forniti durante il collaudo: `pushback.json`, `pretaxi.json`, `taxing.j
 | Fase | Evento | Timestamp UTC | Evidenza | Risultato |
 |---|---|---|---|---|
 | T3 | Pushback / arresto / Taxi | 08:31:32 / 08:41:34 / 08:45:34 | `pushback.json`, `pretaxi.json`, `taxing.json` (allegati conversazione) | `Taxiing → Boarding → Taxiing`; BID e actmp invariati |
-| T4 | Takeoff / Climb | — | — | In attesa |
+| T4 | Allineamento / Takeoff / Climb | 08:57:44 / 08:58:04 / 08:58:29 | Tre snapshot `voy-ft01-snapshot-*.json` (allegati conversazione) | `Boarding → Climbing`, BID e actmp invariati |
 | T5 | Cruise | — | — | In attesa |
 | T6 | Descent / Landing | — | — | In attesa |
 | T7 | END FLIGHT | — | — | In attesa |
