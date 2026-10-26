@@ -29,3 +29,15 @@ function mfo_leg_activity(int $legId): ?object {
   $r=\Proxy\Api\Api::sendSync('GET','v1/activity/leg/'.$legId,null);
   return $r->getStatusCode()===200 ? json_decode($r->getBody()) : null;
 }
+
+/** A program can be administratively changed only while OPEN. */
+function mfo_program_is_open(mysqli $db, int $activityId): bool {
+  $stmt=$db->prepare('SELECT status_mfo FROM voy_mfo_programs WHERE activity_id=? LIMIT 1');
+  if (!$stmt) throw new RuntimeException('Stato programma MFO non disponibile');
+  $stmt->bind_param('i',$activityId);
+  $stmt->execute();
+  $stmt->bind_result($status);
+  $found=$stmt->fetch();
+  $stmt->close();
+  return $found && $status==='OPEN';
+}
