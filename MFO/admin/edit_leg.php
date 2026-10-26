@@ -12,7 +12,7 @@ if (!$stmt) { http_response_code(500); exit('Registro slot non disponibile'); }
 $stmt->bind_param('ii',$legId,$id); $stmt->execute(); $stmt->bind_result($slotStatus);
 $found=$stmt->fetch(); $stmt->close();
 if (!$found) { http_response_code(409); exit('Slot non registrato: riconciliare prima di modificare'); }
-$editable=$slotStatus==='AVAILABLE';
+$editable=$slotStatus==='AVAILABLE' && mfo_program_is_open($conn,$id);
 $error=null; $success=false;
 if ($_SERVER['REQUEST_METHOD']==='POST') {
  if (!$editable) $error='Slot non disponibile: modifica vietata';
