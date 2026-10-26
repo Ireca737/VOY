@@ -33,11 +33,11 @@ $activityRequestAttempted = false;
 $creationOutcomeUncertain = false;
 $values = [
     'title' => '', 'description' => '', 'start' => '',
-    'end' => '', 'active' => '1',
+    'end' => '', 'active' => '1', 'cash_prize' => '0',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    foreach (['title', 'description', 'start', 'end'] as $key) {
+    foreach (['title', 'description', 'start', 'end', 'cash_prize'] as $key) {
         $values[$key] = trim((string) ($_POST[$key] ?? ''));
     }
     $values['active'] = isset($_POST['active']) ? '1' : '0';
@@ -48,6 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Creazione bloccata: riconciliazione amministrativa richiesta prima di un nuovo tentativo.';
     } elseif (!$expectedToken || !hash_equals($expectedToken, $submittedToken)) {
         $error = 'Sessione del modulo scaduta. Ricaricare la pagina.';
+    } elseif (!ctype_digit($values['cash_prize']) || (float)$values['cash_prize'] > 2147483647) {
+        $error = 'Il montepremi Cash deve essere un intero compreso tra 0 e 2147483647.';
     } elseif ($values['title'] === '' || $values['description'] === '' || $values['start'] === '') {
         $error = 'Titolo, descrizione e data iniziale sono obbligatori.';
     } else {
@@ -110,11 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $createdActivityId = (int) $body;
 
-            $stmt = $conn->prepare('INSERT INTO voy_mfo_programs (activity_id) VALUES (?)');
+            $stmt = $conn->prepare('INSERT INTO voy_mfo_programs (activity_id, cash_prize) VALUES (?, ?)');
             if (!$stmt) {
                 throw new RuntimeException('Impossibile preparare la registrazione MFO.');
             }
-            $stmt->bind_param('i', $createdActivityId);
+            $cashPrize = (int)$values['cash_prize'];
+            $stmt->bind_param('ii', $createdActivityId, $cashPrize);
             $ok = $stmt->execute();
             $stmt->close();
             if (!$ok) {
@@ -187,6 +190,7 @@ if (empty($_SESSION['mfo_create_csrf']) && empty($_SESSION['mfo_create_reconcili
                             <input class="form-control" type="datetime-local" id="end" name="end" value="<?php echo mfoCreateEsc($values['end']); ?>">
                         </div>
                     </div>
+                    <div class="mb-3"><label class="form-label" for="cash_prize">Montepremi Cash totale</label><input class="form-control" type="number" min="0" max="2147483647" step="1" id="cash_prize" name="cash_prize" required value="<?php echo mfoCreateEsc($values['cash_prize']); ?>"><div class="form-text">Premio complessivo del programma, ripartito tra i piloti aventi diritto. Inserire 0 se non previsto.</div></div>
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="active" name="active" value="1" <?php echo $values['active'] === '1' ? 'checked' : ''; ?>>
                         <label class="form-check-label" for="active">Activity attiva</label>
