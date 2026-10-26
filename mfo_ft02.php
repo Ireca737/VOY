@@ -29,7 +29,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         require __DIR__ . '/voy/secure_config/conn_voy.php';
         if (!isset($conn) || !($conn instanceof mysqli)) throw new RuntimeException('Connessione VOY assente');
 
-        $updated = mfo_reconcile_acars_lifecycle($conn, $pilotId, $bids, $acars);
+        $distanceResolver = static function (int $legId): float {
+            $response = Api::sendSync('GET', 'v1/activity/leg/' . $legId, null);
+            if ($response->getStatusCode() !== 200) {
+                throw new RuntimeException('Tratta VaBase non disponibile: ' . $legId);
+            }
+            $leg = json_decode((string)$response->getBody());
+            if (!is_object($leg) || !isset($leg->airportInfo)
+                || !is_array($leg->airportInfo) || count($leg->airportInfo) < 2) {
+                throw new RuntimeException('Aeroporti VaBase mancanti: ' . $legId);
+            }
+            $coords = [];
+            foreach ([$leg->airportInfo[0], $leg->airportInfo[1]] as $airport) {
+                if (!is_object($airport) || !isset($airport->lng, $airport->lat)
+                    || !is_numeric($airport->lng) || !is_numeric($airport->lat)) {
+                    throw new RuntimeException('Coordinate VaBase non valide: ' . $legId);
+                }
+                $lng = (float)$airport->lng;
+                $lat = (float)$airport->lat;
+                if (!is_finite($lng) || !is_finite($lat)
+                    || abs($lng) > 180 || abs($lat) > 90) {
+                    throw new RuntimeException('Coordinate fuori intervallo: ' . $legId);
+                }
+                $coords[] = [$lng, $lat];
+            }
+            $distance = get_distance($coords[0][0], $coords[0][1], $coords[1][0], $coords[1][1]);
+            if (!is_finite($distance) || $distance < 0) {
+                throw new RuntimeException('Distanza VOY non calcolabile: ' . $legId);
+            }
+            return $distance;
+        };
+        $updated = mfo_reconcile_acars_lifecycle($conn, $pilotId, $bids, $acars, $distanceResolver);
 
         echo json_encode(['utc'=>gmdate('c'),'acars_count'=>count($acars),'matches'=>$updated], JSON_UNESCAPED_SLASHES);
     } catch (Throwable $e) {
