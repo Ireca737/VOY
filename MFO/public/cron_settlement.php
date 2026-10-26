@@ -3,8 +3,8 @@
  * VOY MFO - daily payout endpoint for cron-job.org.
  *
  * Deploy only after FT-03 approval. Default: DISABLED, no credits.
- * Configure MFO_CRON_TOKEN (>=32 chars) and MFO_PAYOUT_ENABLED=1
- * in server environment; send X-MFO-CRON-TOKEN header from cron-job.org.
+ * Temporary ?key= compatibility with VOY Suite; MFO_CRON_TOKEN overrides
+ * the temporary key. MFO_PAYOUT_ENABLED=1 required for credits.
  * No ACARS polling here.
  */
 declare(strict_types=1);
@@ -12,10 +12,14 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 
-$token = getenv('MFO_CRON_TOKEN');
-$given = $_SERVER['HTTP_X_MFO_CRON_TOKEN'] ?? '';
-if (!is_string($token) || strlen($token) < 32
-    || !is_string($given) || !hash_equals($token, $given)) {
+// Temporary compatibility with the existing VOY Suite cron URL.
+// Replace the shared key before production; never log query strings.
+$secret = getenv('MFO_CRON_TOKEN');
+if (!is_string($secret) || $secret === '') {
+    $secret = '!Ireca737!'; // TEMPORARY - rotate before production
+}
+$provided = $_GET['key'] ?? '';
+if (!is_string($provided) || !hash_equals($secret, $provided)) {
     http_response_code(403);
     exit(json_encode(['ok'=>false,'error'=>'Forbidden']));
 }
