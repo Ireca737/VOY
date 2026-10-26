@@ -111,7 +111,7 @@ function mfoEsc($value): string
                                         <td><?php echo $activity ? mfoEsc($activity['type'] ?? '') : '—'; ?></td>
                                         <td><?php echo $activity ? (filter_var($activity['active'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'Sì' : 'No') : '—'; ?></td>
                                         <td><?php echo $activity ? mfoEsc($activity['endDate'] ?? 'Nessuna scadenza') : '—'; ?></td>
-                                        <td><a class="btn btn-sm btn-outline-primary" href="edit.php?id=<?php echo (int) $program['activity_id']; ?>">Gestisci programma e tratte</a></td>
+                                        <td><a class="btn btn-sm btn-outline-primary" href="edit.php?id=<?php echo (int) $program['activity_id']; ?>">Gestisci programma e tratte</a> <a class="btn btn-sm btn-outline-secondary" href="settlement.php?id=<?php echo (int) $program['activity_id']; ?>">Liquidazioni</a></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
