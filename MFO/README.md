@@ -24,11 +24,18 @@ Modulo VOY per programmi di volo **one shot**, basato sulle Activity native VaBa
 Booking pilota, riconciliazione della cancellazione BID e chiusura ACARS dello slot sono stati validati nei flight test. La logica di completamento riusabile è in `MFO/lib/acars_lifecycle.php`; `mfo_ft02.php` rimane test-only. Nessun file del core VaBase è modificato in questa repository.
 
 ### Persistenza
-La tabella `voy_mfo_slots` è già stata aggiornata sul database VOY: include `activity_id`, `activity_leg_id` univoco, riferimenti BID/ACARS/PIREP, stati e campi bonus XP. Resta il vecchio `mfo_month`, da rimuovere dopo una migrazione verificata. Manca il registro `voy_mfo_programs`, definito in `database/001_programs.sql` e da creare separatamente.
+La tabella `voy_mfo_slots` è già stata aggiornata sul database VOY: include `activity_id`, `activity_leg_id` univoco, riferimenti BID/ACARS/PIREP, stati e campi bonus XP. Resta il vecchio `mfo_month`, da rimuovere dopo una migrazione verificata. Il registro `voy_mfo_programs` è utilizzato dalle pagine amministrative MFO e risulta operativo nei test descritti; `database/001_programs.sql` ne documenta la struttura per nuove installazioni. La presenza e lo schema effettivi in ciascun ambiente devono comunque essere verificati sul relativo database.
 
-### Blocchi prima della pubblicazione
-1. Verificare e integrare gli endpoint VaBase per Activity, Legs, BID e completamenti.
-2. Assicurare che Tours & Events non mostri programmi MFO.
-3. Prevenire prenotazioni dirette tramite `activity_leg.php` o altri percorsi che aggirerebbero lo slot esclusivo.
-4. Implementare gestione concorrente della prenotazione, recupero errori API e riconciliazione.
-5. Validare permessi, protezione CSRF, escaping, bonus XP e PIREP confermato.
+### Funzionalità consolidate nei flight test
+- Booking esclusivo dello slot con collegamento al BID VaBase.
+- Riconciliazione della cancellazione BID prima del completamento.
+- Chiusura ACARS a `Disembarking`, con corrispondenza di pilota, BID, tratta e tentativo `actmp_id`, timestamp UTC e protezione idempotente.
+
+### Verifiche e attività ancora aperte prima del rilascio completo
+1. Completare la compartimentazione rispetto a Tours & Events e verificare tutti gli accessi diretti, incluso `activity_leg.php`, per impedire prenotazioni che aggirino il controllo esclusivo MFO.
+2. Verificare in modo sistematico concorrenza, rollback e recupero dagli errori tra database VOY e API VaBase, oltre ai casi già validati nei flight test.
+3. Eseguire la revisione di sicurezza e autorizzazioni (permessi, CSRF, escaping, controlli input) sulle pagine destinate al rilascio.
+4. Implementare e validare il bonus XP idempotente nel branch `feat/mfo-xp` e definire la verifica del PIREP, se richiesta dal processo di accredito.
+5. Verificare lo schema database effettivo e pianificare la rimozione del campo legacy `mfo_month` tramite migrazione controllata.
+
+La baseline lifecycle resta fissata nel commit `7f9b288` di `feat/mfo-pilot`; lo sviluppo XP prosegue separatamente in `feat/mfo-xp`.
