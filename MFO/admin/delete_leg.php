@@ -12,6 +12,7 @@ $error=null;
 $completed=false;
 if ($_SERVER['REQUEST_METHOD']==='POST') {
  if (!mfo_verify()) $error='Token di sicurezza non valido';
+ elseif (!mfo_program_is_open($conn,$activityId)) $error='Programma non OPEN: eliminazione vietata';
  elseif ((string)($_POST['confirm']??'')!=='DELETE') $error='Conferma non valida';
  elseif ($status==='OBSOLETE') $error='Tratta già contrassegnata OBSOLETE';
  else {
@@ -54,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 <?php if($error): ?><div class="alert alert-danger"><?=mfo_e($error)?></div><?php endif; ?>
 <?php if($completed): ?><div class="alert alert-success">Tratta eliminata da VaBase e contrassegnata OBSOLETE in VOY.</div><?php endif; ?>
 <p>Programma #<?= (int)$activityId ?> — stato VOY: <?=mfo_e($completed?'OBSOLETE':$status)?></p>
-<?php if(!$completed && $status!=='OBSOLETE'): ?>
+<?php if(!$completed && $status!=='OBSOLETE' && mfo_program_is_open($conn,$activityId)): ?>
 <div class="alert alert-warning">L'eliminazione rimuove la tratta da VaBase. Il record VOY viene conservato con stato OBSOLETE.</div>
 <form method="post"><input type="hidden" name="csrf_token" value="<?=mfo_e(mfo_token())?>"><input type="hidden" name="confirm" value="DELETE">
 <button class="btn btn-danger" type="submit" onclick="return confirm('Confermi la cancellazione definitiva della tratta #<?= (int)$legId ?> da VaBase?')">Conferma eliminazione</button></form>
