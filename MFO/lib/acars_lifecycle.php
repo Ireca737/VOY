@@ -161,6 +161,7 @@ function mfo_reconcile_acars_lifecycle(
             }
 
             $result[] = [
+                'activity_leg_id' => $legId,
                 'flight' => $match['flight_number'],
                 'stage' => $match['stage'],
                 'actmpId' => $match['actmp_id'],
@@ -179,14 +180,9 @@ function mfo_reconcile_acars_lifecycle(
     // settlement orchestrator. FT-02 passes no hook and remains unchanged.
     if ($onProgramCompleted !== null) {
         $completedLegIds = [];
-        foreach ($matches as $match) {
-            if ($match['stage'] === 'Disembarking') {
-                foreach ($result as $item) {
-                    if ($item['completed'] && $item['actmpId'] === $match['actmp_id']
-                        && $item['flight'] === $match['flight_number']) {
-                        $completedLegIds[(int)$match['activity_leg_id']] = true;
-                    }
-                }
+        foreach ($result as $item) {
+            if ($item['completed']) {
+                $completedLegIds[(int)$item['activity_leg_id']] = true;
             }
         }
         foreach (array_keys($completedLegIds) as $legId) {
