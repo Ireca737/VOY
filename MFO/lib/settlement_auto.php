@@ -68,3 +68,35 @@ function mfo_resume_pending_settlements(mysqli $conn, callable $sendCredits): ar
     }
     return $out;
 }
+
+/**
+ * Daily payout-only runner: prepare completed OPEN programs, then pay READY.
+ * ACARS collection is deliberately out of scope.
+ * Errors on one program must not block other programs.
+ */
+function mfo_run_daily_payouts(mysqli $conn, callable $sendCredits): array
+{
+    $result = $conn->query(
+        "SELECT p.id
+         FROM voy_mfo_programs p
+         WHERE p.status_mfo='READY'
+            OR (p.status_mfo='OPEN'
+                AND EXISTS (SELECT 1 FROM voy_mfo_slots s
+                            WHERE s.activity_id=p.activity_id AND s.status_mfo='COMPLETED')
+                AND NOT EXISTS (SELECT 1 FROM voy_mfo_slots s
+                                WHERE s.activity_id=p.activity_id
+                                  AND s.status_mfo NOT IN ('COMPLETED','OBSOLETE')))
+         ORDER BY p.id"
+    );
+    $out = [];
+    foreach ($result->fetch_all(MYSQLI_ASSOC) as $row) {
+        $id = (int)$row['id'];
+        try {
+            $out[$id] = mfo_run_program_settlement($conn, $id, $sendCredits);
+        } catch (Throwable $e) {
+            error_log('[MFO daily payout] program '.$id.': '.$e->getMessage());
+            $out[$id] = ['status'=>'CHECK_REQUIRED','error'=>'Consultare error_log'];
+        }
+    }
+    return $out;
+}
