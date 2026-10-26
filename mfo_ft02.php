@@ -6,6 +6,7 @@
 use Proxy\Api\Api;
 require_once __DIR__ . '/lib/functions.php';
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/MFO/lib/acars_lifecycle.php';
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
@@ -25,39 +26,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bids = json_decode((string)$resB->getBody(), true);
         $acars = json_decode((string)$resA->getBody(), true);
         if (!is_array($bids) || !array_is_list($bids) || !is_array($acars) || !array_is_list($acars)) throw new RuntimeException('Formato API non valido');
-        $matches = [];
-        foreach ($acars as $flight) {
-            if (!is_array($flight) || (int)($flight['pilotId'] ?? 0) !== $pilotId) continue;
-            $attempt = (string)($flight['actmpId'] ?? '');
-            $number = trim((string)($flight['flightNumber'] ?? ''));
-            $stage = trim((string)($flight['statStage'] ?? ''));
-            if ($attempt === '' || $number === '') continue;
-            foreach ($bids as $bid) {
-                if (!is_array($bid) || (int)($bid['pilotId'] ?? 0) !== $pilotId
-                    || (string)($bid['flightNumber'] ?? '') !== $number
-                    || (string)($bid['bidType'] ?? '') !== 'activity'
-                    || (int)($bid['activityLegId'] ?? 0) < 1) continue;
-                $matches[] = ['bid'=>(string)$bid['id'], 'leg'=>(int)$bid['activityLegId'],
-                    'number'=>$number, 'attempt'=>$attempt, 'stage'=>$stage];
-            }
-        }
         require __DIR__ . '/voy/secure_config/conn_voy.php';
         if (!isset($conn) || !($conn instanceof mysqli)) throw new RuntimeException('Connessione VOY assente');
-        $conn->query("SET time_zone = '+00:00'");
-        $updated = [];
-        foreach ($matches as $m) {
-            // No reassignment of an existing different attempt. One-time completion.
-            $sql = $m['stage'] === 'Disembarking'
-                ? "UPDATE voy_mfo_slots SET actmp_id=?, status_flight=?, status_mfo='COMPLETED', completed_at=UTC_TIMESTAMP() WHERE activity_leg_id=? AND pilot_id=? AND bid_id=? AND status_mfo='BOOKED' AND completed_at IS NULL AND (actmp_id IS NULL OR actmp_id=?)"
-                : "UPDATE voy_mfo_slots SET actmp_id=?, status_flight=? WHERE activity_leg_id=? AND pilot_id=? AND bid_id=? AND status_mfo='BOOKED' AND completed_at IS NULL AND (actmp_id IS NULL OR actmp_id=?)";
-            $stmt = $conn->prepare($sql);
-            if (!$stmt) throw new RuntimeException('Prepare MFO fallita');
-            $pid = (string)$pilotId;
-            $stmt->bind_param('ssisss', $m['attempt'], $m['stage'], $m['leg'], $pid, $m['bid'], $m['attempt']);
-            if (!$stmt->execute()) throw new RuntimeException('UPDATE MFO fallito');
-            $updated[] = ['flight'=>$m['number'], 'stage'=>$m['stage'], 'actmpId'=>$m['attempt'], 'rows'=>$stmt->affected_rows];
-            $stmt->close();
-        }
+
+        $updated = mfo_reconcile_acars_lifecycle($conn, $pilotId, $bids, $acars);
+
         echo json_encode(['utc'=>gmdate('c'),'acars_count'=>count($acars),'matches'=>$updated], JSON_UNESCAPED_SLASHES);
     } catch (Throwable $e) {
         error_log('[mfo_ft02] '.$e->getMessage());
