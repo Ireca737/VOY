@@ -11,7 +11,8 @@ Modulo VOY per programmi di volo **one shot**, basato sulle Activity native VaBa
 - Inizio, fine, attivazione, titolo, descrizione e banner restano governati dall'Activity VaBase.
 - BID, ACARS e PIREP continuano a usare VaBase, senza duplicarne il motore.
 - Vetrina pubblica e amministrazione MFO separate dalle normali pagine Tours & Events.
-- Bonus XP MFO calcolato e accreditato dal modulo VOY con logica idempotente, da implementare e verificare.
+- Chiusura slot MFO consolidata su ACARS `Disembarking`, con protezione one-shot e correlazione BID/attempt.
+- Bonus XP MFO calcolato e accreditato dal modulo VOY con logica idempotente, da implementare e verificare su branch dedicato.
 
 ## Struttura
 - `admin/`: interfaccia amministrativa dedicata, destinazione prevista sul sito `/admin/mfo/`.
@@ -20,7 +21,7 @@ Modulo VOY per programmi di volo **one shot**, basato sulle Activity native VaBa
 - `docs/`: architettura, API, verifiche e criteri di accettazione.
 
 ## Stato
-Impostazione iniziale del progetto, **non distribuibile in produzione**. Nessun file del core VaBase è modificato in questa repository.
+Booking pilota, riconciliazione della cancellazione BID e chiusura ACARS dello slot sono stati validati nei flight test. La logica di completamento riusabile è in `MFO/lib/acars_lifecycle.php`; `mfo_ft02.php` rimane test-only. Nessun file del core VaBase è modificato in questa repository.
 
 ### Persistenza
 La tabella `voy_mfo_slots` è già stata aggiornata sul database VOY: include `activity_id`, `activity_leg_id` univoco, riferimenti BID/ACARS/PIREP, stati e campi bonus XP. Resta il vecchio `mfo_month`, da rimuovere dopo una migrazione verificata. Manca il registro `voy_mfo_programs`, definito in `database/001_programs.sql` e da creare separatamente.
