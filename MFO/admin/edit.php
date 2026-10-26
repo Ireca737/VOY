@@ -4,6 +4,8 @@ $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if (!$id || !mfo_program($conn,$id)) { http_response_code(404); exit('Programma MFO non trovato'); }
 $error=null; $success=false;
 $programOpen=mfo_program_is_open($conn,$id);
+$cashRow=$conn->query('SELECT cash_prize FROM voy_mfo_programs WHERE activity_id='.(int)$id)->fetch_assoc();
+$cashPrize=(int)($cashRow['cash_prize']??0);
 $r=\Proxy\Api\Api::sendSync('GET','v1/activity/'.$id,null);
 if ($r->getStatusCode()!==200) { http_response_code(502); exit('Activity VaBase non disponibile'); }
 $a=json_decode($r->getBody());
@@ -12,13 +14,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   if (!$programOpen) $error='Programma MFO non OPEN: modifica vietata';
   elseif (!mfo_verify()) $error='Token di sicurezza non valido';
   else {
+    $cashInput=trim((string)($_POST['cash_prize']??''));
     $title=trim((string)($_POST['title']??''));
     $description=(string)($_POST['description']??'');
     $doc=json_decode($description);
     $start=(string)($_POST['start']??''); $end=(string)($_POST['end']??'');
     $ds=DateTimeImmutable::createFromFormat('!Y-m-d\\TH:i',$start,new DateTimeZone('UTC'));
     $de=$end!==''?DateTimeImmutable::createFromFormat('!Y-m-d\\TH:i',$end,new DateTimeZone('UTC')):null;
-    if ($title==='' || !isset($doc->blocks) || !is_array($doc->blocks) || !$doc->blocks || !$ds ||
+    if (!ctype_digit($cashInput) || (float)$cashInput>2147483647) $error='Montepremi Cash non valido: inserire un intero non negativo';
+    elseif ($title==='' || !isset($doc->blocks) || !is_array($doc->blocks) || !$doc->blocks || !$ds ||
         $ds->format('Y-m-d\\TH:i')!==$start || ($end!=='' && (!$de || $de->format('Y-m-d\\TH:i')!==$end)) ||
         ($de && $de<=$ds)) $error='Controllare titolo, descrizione EditorJS e date UTC';
     else {
@@ -29,7 +33,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         'Active'=>isset($_POST['active']), 'LegsInOrder'=>false,'MinRankId'=>$a->minRankId??null
       ];
       $res=\Proxy\Api\Api::sendSync('PUT','v1/activity',$data);
-      if ($res->getStatusCode()===200) { $success=true; $r=\Proxy\Api\Api::sendSync('GET','v1/activity/'.$id,null); if ($r->getStatusCode()===200) $a=json_decode($r->getBody()); }
+      if ($res->getStatusCode()===200) {
+        $newCash=(int)$cashInput;
+        $stmt=$conn->prepare("UPDATE voy_mfo_programs SET cash_prize=? WHERE activity_id=? AND status_mfo='OPEN'");
+        $stmt->bind_param('ii',$newCash,$id);
+        if (!$stmt->execute()) $error='Activity aggiornata in VaBase, ma montepremi Cash non salvato: verificare manualmente';
+        else { $cashPrize=$newCash; $success=true; }
+        $stmt->close();
+        $r=\Proxy\Api\Api::sendSync('GET','v1/activity/'.$id,null); if ($r->getStatusCode()===200) $a=json_decode($r->getBody()); }
       else $error='VaBase non ha accettato la modifica';
     }
   }
@@ -48,6 +59,7 @@ $endValue=!empty($a->endDate)?substr(str_replace(' ','T',$a->endDate),0,16):'';
 <div class="mb-3"><label class="form-label">Descrizione</label><div id="editorJs" class="form-control" style="min-height:180px"></div><input type="hidden" name="description" id="mfoDescription" value="<?=mfo_e($a->description??'')?>"></div>
 <div class="row"><div class="col-md-6 mb-3"><label class="form-label">Inizio UTC</label><input type="datetime-local" class="form-control" name="start" required value="<?=mfo_e($startValue)?>"></div>
 <div class="col-md-6 mb-3"><label class="form-label">Fine UTC</label><input type="datetime-local" class="form-control" name="end" value="<?=mfo_e($endValue)?>"></div></div>
+<div class="mb-3"><label class="form-label" for="cash_prize">Montepremi Cash totale</label><input class="form-control" type="number" min="0" max="2147483647" step="1" id="cash_prize" name="cash_prize" required value="<?= (int)$cashPrize ?>"><div class="form-text">Valore complessivo del premio; 0 se non previsto.</div></div>
 <div class="form-check mb-3"><input type="checkbox" class="form-check-input" name="active" id="active" <?=filter_var($a->active??false,FILTER_VALIDATE_BOOLEAN)?'checked':''?>><label for="active" class="form-check-label">Attivo</label></div>
 <p class="text-muted">Tipo Event e LegsInOrder=false sono fissi. Il bonus XP MFO viene gestito separatamente.</p>
 <?php if($programOpen): ?><button class="btn btn-primary">Salva</button><?php else: ?><div class="alert alert-warning">Programma chiuso: modifiche disabilitate.</div><?php endif; ?></fieldset></form></div></div>
