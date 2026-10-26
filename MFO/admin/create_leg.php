@@ -74,7 +74,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['verify_clean_state'])) 
    }
   }
  }
-} elseif ($_SERVER['REQUEST_METHOD']==='POST') {
+} elseif ($_SERVER['REQUEST_METHOD']==='POST' && !mfo_program_is_open($conn,$id)) {
+ http_response_code(409); exit('Programma MFO non OPEN: creazione tratta vietata');
+}
+if ($_SERVER['REQUEST_METHOD']==='POST') {
  if (!empty($_SESSION['mfo_leg_block_'.$id])) $error='Creazione bloccata: riconciliare prima la tratta VaBase';
  elseif (!mfo_verify()) $error='Token non valido';
  else {
