@@ -48,6 +48,9 @@ try {
     }
     $lockHeld = true;
 
+    if (session_status() !== PHP_SESSION_ACTIVE && !session_start()) {
+        throw new RuntimeException('Sessione PHP richiesta dal wrapper VaBase non disponibile');
+    }
     \Proxy\Api\Api::__constructStatic();
     $sender = static function (array $payload): array {
         $response = \Proxy\Api\Api::sendSync('POST', 'v1/pilot/credits/', $payload);
