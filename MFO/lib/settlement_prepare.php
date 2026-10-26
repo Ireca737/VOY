@@ -73,10 +73,13 @@ function mfo_prepare_program_settlement(mysqli $conn, int $programId): array
             if ($status !== 'COMPLETED') {
                 throw new RuntimeException('Programma non concluso: slot ' . $slot['slot_id'] . ' in stato ' . $status);
             }
-            $pilot = (int)$slot['pilot_id'];
-            if ($pilot < 1 || $slot['bonus_xp'] === null || !ctype_digit((string)$slot['bonus_xp'])) {
+            $pilotRaw = (string)($slot['pilot_id'] ?? '');
+            if (!ctype_digit($pilotRaw) || strlen($pilotRaw) > 10
+                || (float)$pilotRaw > 2147483647 || (int)$pilotRaw < 1
+                || $slot['bonus_xp'] === null || !ctype_digit((string)$slot['bonus_xp'])) {
                 throw new RuntimeException('Slot COMPLETED privo di pilota o XP validi: ' . $slot['slot_id']);
             }
+            $pilot = (int)$pilotRaw;
             $xp = (int)$slot['bonus_xp'];
             if ($xp > 4294967295) {
                 throw new RuntimeException('XP fuori intervallo: slot ' . $slot['slot_id']);
