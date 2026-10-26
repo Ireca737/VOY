@@ -39,3 +39,15 @@ La tabella `voy_mfo_slots` è già stata aggiornata sul database VOY: include `a
 5. Verificare lo schema database effettivo e pianificare la rimozione del campo legacy `mfo_month` tramite migrazione controllata.
 
 La baseline lifecycle resta fissata nel commit `7f9b288` di `feat/mfo-pilot`; lo sviluppo XP prosegue separatamente in `feat/mfo-xp`.
+
+
+## Cron giornaliero XP/Cash (FT-03, non ancora in produzione)
+- Endpoint predisposto: `public/cron_settlement.php`, destinazione prevista `/mfo/cron_settlement.php`.
+- Il cron **non** rileva ACARS: elabora programmi con tutte le legs `COMPLETED`/`OBSOLETE`, almeno una `COMPLETED`, e riprende soltanto liquidazioni `PENDING` di programmi `READY`.
+- Autenticazione: header HTTPS `X-MFO-CRON-TOKEN`, corrispondente a variabile ambiente server `MFO_CRON_TOKEN` (almeno 32 caratteri). Non mettere il segreto nella URL.
+- Kill switch: `MFO_PAYOUT_ENABLED=1` deve essere configurato esplicitamente; altrimenti l'endpoint restituisce 503 senza modifiche.
+- Lock MySQL `GET_LOCK` per evitare sovrapposizioni del cron; stato `PROCESSING`/`UNCERTAIN` mai ritentato automaticamente.
+- Anteprima senza scritture: `public/cron_settlement_preview.php`, stesso header.
+- **Non abilitare ancora**: verificare compatibilità esatta di `Api::sendSync('POST', 'v1/pilot/credits/', ...)`, schema risposta VaBase, configurazione environment su hosting, disponibilità cron-job.org header e test FT-03.
+- Le chiamate API di accredito non sono idempotenti lato VaBase: esiti incerti richiedono riconciliazione manuale.
+- Non eseguire pulizia dei dati test né sincronizzazione locale/server prima del via libera.
