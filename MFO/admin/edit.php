@@ -3,12 +3,14 @@ require_once __DIR__ . '/_common.php';
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if (!$id || !mfo_program($conn,$id)) { http_response_code(404); exit('Programma MFO non trovato'); }
 $error=null; $success=false;
+$programOpen=mfo_program_is_open($conn,$id);
 $r=\Proxy\Api\Api::sendSync('GET','v1/activity/'.$id,null);
 if ($r->getStatusCode()!==200) { http_response_code(502); exit('Activity VaBase non disponibile'); }
 $a=json_decode($r->getBody());
 if (!$a || $a->type!=='Event') { http_response_code(409); exit('Activity MFO non valida'); }
 if ($_SERVER['REQUEST_METHOD']==='POST') {
-  if (!mfo_verify()) $error='Token di sicurezza non valido';
+  if (!$programOpen) $error='Programma MFO non OPEN: modifica vietata';
+  elseif (!mfo_verify()) $error='Token di sicurezza non valido';
   else {
     $title=trim((string)($_POST['title']??''));
     $description=(string)($_POST['description']??'');
@@ -41,15 +43,15 @@ $endValue=!empty($a->endDate)?substr(str_replace(' ','T',$a->endDate),0,16):'';
 <?php if($error): ?><div class="alert alert-danger"><?=mfo_e($error)?></div><?php endif; ?>
 <?php if($success): ?><div class="alert alert-success">Modifiche salvate in VaBase.</div><?php endif; ?>
 <div class="card mb-4"><div class="card-header">Dati programma</div><div class="card-body">
-<form method="post"><input type="hidden" name="csrf_token" value="<?=mfo_e(mfo_token())?>">
+<form method="post"><fieldset <?= $programOpen ? '' : 'disabled' ?>><input type="hidden" name="csrf_token" value="<?=mfo_e(mfo_token())?>">
 <div class="mb-3"><label class="form-label">Titolo</label><input class="form-control" name="title" required value="<?=mfo_e($a->title??'')?>"></div>
 <div class="mb-3"><label class="form-label">Descrizione</label><div id="editorJs" class="form-control" style="min-height:180px"></div><input type="hidden" name="description" id="mfoDescription" value="<?=mfo_e($a->description??'')?>"></div>
 <div class="row"><div class="col-md-6 mb-3"><label class="form-label">Inizio UTC</label><input type="datetime-local" class="form-control" name="start" required value="<?=mfo_e($startValue)?>"></div>
 <div class="col-md-6 mb-3"><label class="form-label">Fine UTC</label><input type="datetime-local" class="form-control" name="end" value="<?=mfo_e($endValue)?>"></div></div>
 <div class="form-check mb-3"><input type="checkbox" class="form-check-input" name="active" id="active" <?=filter_var($a->active??false,FILTER_VALIDATE_BOOLEAN)?'checked':''?>><label for="active" class="form-check-label">Attivo</label></div>
 <p class="text-muted">Tipo Event e LegsInOrder=false sono fissi. Il bonus XP MFO viene gestito separatamente.</p>
-<button class="btn btn-primary">Salva</button></form></div></div>
-<div class="card mb-4"><div class="card-header">Slot / tratte <a class="btn btn-sm btn-primary float-end" href="create_leg.php?id=<?=(int)$id?>">Nuova tratta</a></div>
+<?php if($programOpen): ?><button class="btn btn-primary">Salva</button><?php else: ?><div class="alert alert-warning">Programma chiuso: modifiche disabilitate.</div><?php endif; ?></fieldset></form></div></div>
+<div class="card mb-4"><div class="card-header">Slot / tratte <?php if($programOpen): ?><a class="btn btn-sm btn-primary float-end" href="create_leg.php?id=<?=(int)$id?>">Nuova tratta</a><?php endif; ?></div>
 <div class="card-body"><table class="table table-bordered"><thead><tr><th>Leg ID</th><th>Partenza</th><th>Arrivo</th><th>Volo</th><th>Azioni</th></tr></thead><tbody>
 <?php foreach(($a->activityLegs??[]) as $leg): ?><tr><td><?= (int)$leg->id ?></td><td><?=mfo_e($leg->departureIcao??'')?></td><td><?=mfo_e($leg->arrivalIcao??'')?></td><td><?=mfo_e($leg->flightNumber??'')?></td><td><a href="edit_leg.php?leg_id=<?=(int)$leg->id?>">Modifica</a> <a class="text-danger ms-2" href="delete_leg.php?leg_id=<?=(int)$leg->id?>">Elimina</a></td></tr><?php endforeach; ?>
 </tbody></table></div></div></div></main>
