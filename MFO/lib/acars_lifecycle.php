@@ -11,13 +11,16 @@
  *   -> COMPLETED + completed_at (UTC)
  *
  * The update is idempotent and never reassigns a different actmp_id.
+ * On Disembarking, a caller-supplied resolver provides the theoretical distance
+ * according to the existing VOY get_distance() convention.
  */
 
 function mfo_reconcile_acars_lifecycle(
     mysqli $conn,
     int $pilotId,
     array $bids,
-    array $acars
+    array $acars,
+    ?callable $distanceResolver = null
 ): array {
     if ($pilotId < 1) {
         throw new InvalidArgumentException('Pilot ID non valido');
@@ -65,12 +68,44 @@ function mfo_reconcile_acars_lifecycle(
     foreach ($matches as $match) {
         $isCompleted = $match['stage'] === 'Disembarking';
 
+        $distanceNm = null;
+        $bonusXp = null;
+        if ($isCompleted) {
+            // Do not fetch VaBase leg data for already-closed or unrelated slots.
+            $check = $conn->prepare("SELECT slot_id FROM voy_mfo_slots
+                WHERE activity_leg_id=? AND pilot_id=? AND bid_id=?
+                  AND status_mfo='BOOKED' AND completed_at IS NULL
+                  AND (actmp_id IS NULL OR actmp_id=?) LIMIT 1");
+            if (!$check) throw new RuntimeException('Prepare verifica slot MFO fallita');
+            $check->bind_param('iiis', $match['activity_leg_id'], $pilotId, $match['bid_id'], $match['actmp_id']);
+            try {
+                if (!$check->execute()) throw new RuntimeException('Verifica slot MFO fallita');
+                $check->store_result();
+                $eligible = $check->num_rows === 1;
+            } finally {
+                $check->close();
+            }
+            if (!$eligible) continue;
+            if ($distanceResolver === null) {
+                throw new RuntimeException('Resolver distanza MFO non configurato');
+            }
+            $distanceNm = $distanceResolver($match['activity_leg_id']);
+            if (!is_numeric($distanceNm) || !is_finite((float)$distanceNm)
+                || (float)$distanceNm < 0 || (float)$distanceNm > 999999999.9) {
+                throw new RuntimeException('Distanza teorica MFO non valida');
+            }
+            $distanceNm = round((float)$distanceNm, 1);
+            $bonusXp = (int)floor($distanceNm / 10);
+        }
+
         $sql = $isCompleted
             ? "UPDATE voy_mfo_slots
                SET actmp_id=?,
                    status_flight=?,
                    status_mfo='COMPLETED',
-                   completed_at=UTC_TIMESTAMP()
+                   completed_at=UTC_TIMESTAMP(),
+                   distance_nm=?,
+                   bonus_xp=?
                WHERE activity_leg_id=?
                  AND pilot_id=?
                  AND bid_id=?
@@ -96,15 +131,29 @@ function mfo_reconcile_acars_lifecycle(
         $bidId = $match['bid_id'];
 
         try {
-            $stmt->bind_param(
-                'ssiiis',
-                $match['actmp_id'],
-                $match['stage'],
-                $legId,
-                $pilotId,
-                $bidId,
-                $match['actmp_id']
-            );
+            if ($isCompleted) {
+                $stmt->bind_param(
+                    'ssddiiis',
+                    $match['actmp_id'],
+                    $match['stage'],
+                    $distanceNm,
+                    $bonusXp,
+                    $legId,
+                    $pilotId,
+                    $bidId,
+                    $match['actmp_id']
+                );
+            } else {
+                $stmt->bind_param(
+                    'ssiiis',
+                    $match['actmp_id'],
+                    $match['stage'],
+                    $legId,
+                    $pilotId,
+                    $bidId,
+                    $match['actmp_id']
+                );
+            }
 
             if (!$stmt->execute()) {
                 throw new RuntimeException('UPDATE lifecycle MFO fallito');
@@ -114,7 +163,9 @@ function mfo_reconcile_acars_lifecycle(
                 'flight' => $match['flight_number'],
                 'stage' => $match['stage'],
                 'actmpId' => $match['actmp_id'],
-                'completed' => $isCompleted,
+                'completed' => $isCompleted && $stmt->affected_rows === 1,
+                'distance_nm' => $isCompleted && $stmt->affected_rows === 1 ? $distanceNm : null,
+                'bonus_xp' => $isCompleted && $stmt->affected_rows === 1 ? $bonusXp : null,
                 'rows' => $stmt->affected_rows,
             ];
         } finally {
