@@ -20,7 +20,8 @@ function mfo_reconcile_acars_lifecycle(
     int $pilotId,
     array $bids,
     array $acars,
-    ?callable $distanceResolver = null
+    ?callable $distanceResolver = null,
+    ?callable $onProgramCompleted = null
 ): array {
     if ($pilotId < 1) {
         throw new InvalidArgumentException('Pilot ID non valido');
@@ -170,6 +171,43 @@ function mfo_reconcile_acars_lifecycle(
             ];
         } finally {
             $stmt->close();
+        }
+    }
+
+    // Optional production hook: invoked only when a newly completed slot is
+    // the last unfinished slot in its program. The caller supplies the trusted
+    // settlement orchestrator. FT-02 passes no hook and remains unchanged.
+    if ($onProgramCompleted !== null) {
+        $completedLegIds = [];
+        foreach ($matches as $match) {
+            if ($match['stage'] === 'Disembarking') {
+                foreach ($result as $item) {
+                    if ($item['completed'] && $item['actmpId'] === $match['actmp_id']
+                        && $item['flight'] === $match['flight_number']) {
+                        $completedLegIds[(int)$match['activity_leg_id']] = true;
+                    }
+                }
+            }
+        }
+        foreach (array_keys($completedLegIds) as $legId) {
+            $check = $conn->prepare(
+                "SELECT p.id FROM voy_mfo_programs p
+                 JOIN voy_mfo_slots s ON s.activity_id=p.activity_id
+                 WHERE s.activity_leg_id=? AND p.status_mfo='OPEN'
+                   AND EXISTS (SELECT 1 FROM voy_mfo_slots c
+                               WHERE c.activity_id=p.activity_id AND c.status_mfo='COMPLETED')
+                   AND NOT EXISTS (SELECT 1 FROM voy_mfo_slots x
+                                   WHERE x.activity_id=p.activity_id
+                                     AND x.status_mfo NOT IN ('COMPLETED','OBSOLETE'))
+                 LIMIT 1"
+            );
+            $check->bind_param('i', $legId);
+            $check->execute();
+            $ready = $check->get_result()->fetch_assoc();
+            $check->close();
+            if ($ready) {
+                $onProgramCompleted((int)$ready['id']);
+            }
         }
     }
 
