@@ -134,7 +134,7 @@ function mfo_reconcile_acars_lifecycle(
         try {
             if ($isCompleted) {
                 $stmt->bind_param(
-                    'ssddiiis',
+                    'ssdiiiis',
                     $match['actmp_id'],
                     $match['stage'],
                     $distanceNm,
