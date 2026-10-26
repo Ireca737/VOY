@@ -17,7 +17,7 @@ function mfo_leg_slot(int $legId): ?array {
     return (static function (int $legId): ?array {
         require __DIR__ . '/voy/secure_config/conn_voy.php';
         if (!isset($conn) || !($conn instanceof mysqli)) throw new RuntimeException('Database VOY non disponibile');
-        $stmt = $conn->prepare("SELECT s.slot_id, s.activity_id, s.status_mfo FROM voy_mfo_slots s INNER JOIN voy_mfo_programs p ON p.activity_id=s.activity_id WHERE s.activity_leg_id=? AND s.status_mfo <> 'OBSOLETE' LIMIT 1");
+        $stmt = $conn->prepare("SELECT s.slot_id, s.activity_id, s.status_mfo FROM voy_mfo_slots s INNER JOIN voy_mfo_programs p ON p.activity_id=s.activity_id WHERE s.activity_leg_id=? AND p.status_mfo='OPEN' AND s.status_mfo <> 'OBSOLETE' LIMIT 1");
         if (!$stmt) throw new RuntimeException('Query slot MFO non disponibile');
         $stmt->bind_param('i', $legId);
         $stmt->execute();
@@ -31,7 +31,7 @@ function mfo_leg_book(int $slotId, int $pilotId): bool {
     return (static function (int $slotId, int $pilotId): bool {
         require __DIR__ . '/voy/secure_config/conn_voy.php';
         if (!isset($conn) || !($conn instanceof mysqli)) throw new RuntimeException('Database VOY non disponibile');
-        $stmt = $conn->prepare("UPDATE voy_mfo_slots SET status_mfo='BOOKED', pilot_id=?, booked_at=NOW() WHERE slot_id=? AND status_mfo='AVAILABLE'");
+        $stmt = $conn->prepare("UPDATE voy_mfo_slots SET status_mfo='BOOKED', pilot_id=?, booked_at=NOW() WHERE slot_id=? AND status_mfo='AVAILABLE' AND EXISTS (SELECT 1 FROM voy_mfo_programs p WHERE p.activity_id=voy_mfo_slots.activity_id AND p.status_mfo='OPEN')");
         if (!$stmt) throw new RuntimeException('Aggiornamento slot non disponibile');
         $stmt->bind_param('ii', $pilotId, $slotId);
         if (!$stmt->execute()) { $stmt->close(); throw new RuntimeException('Aggiornamento slot fallito'); }
