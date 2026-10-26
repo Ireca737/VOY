@@ -1,7 +1,7 @@
 <?php
 /**
  * MFO daily cron — PREVIEW ONLY until explicitly enabled after FT-03.
- * Public URL for cron-job.org; configure MFO_CRON_TOKEN in server environment.
+ * Public URL for cron-job.org; temporary ?key= matching VOY Suite.
  * Does NOT query ACARS, mutate DB, or send XP/Cash to VaBase.
  */
 declare(strict_types=1);
@@ -9,13 +9,16 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 
+// Temporary compatibility with the existing VOY Suite cron URL.
+// Replace the shared key before production; never log query strings.
 $secret = getenv('MFO_CRON_TOKEN');
-$provided = $_SERVER['HTTP_X_MFO_CRON_TOKEN'] ?? '';
-if (!is_string($secret) || strlen($secret) < 32
-    || !is_string($provided) || !hash_equals($secret, $provided)) {
+if (!is_string($secret) || $secret === '') {
+    $secret = '!Ireca737!'; // TEMPORARY - rotate before production
+}
+$provided = $_GET['key'] ?? '';
+if (!is_string($provided) || !hash_equals($secret, $provided)) {
     http_response_code(403);
-    echo json_encode(['ok'=>false,'error'=>'Forbidden']);
-    exit;
+    exit(json_encode(['ok'=>false,'error'=>'Forbidden']));
 }
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
     http_response_code(405);
