@@ -42,7 +42,7 @@ function mfo_settle_one_pilot(mysqli $conn, int $settlementId, callable $sendCre
             'PilotId'=>(int)$row['pilot_id'],
             'Hours'=>null,
             'Xp'=>(int)$row['total_xp'],
-            'Cash'=>(int)$row['cash_amount']
+            'Cash'=>(float)$row['cash_amount']
         ]);
         if (!is_array($response) || !isset($response['http_code'])) {
             throw new RuntimeException('Risposta API priva di codice HTTP');
