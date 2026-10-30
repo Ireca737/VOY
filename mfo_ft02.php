@@ -6,7 +6,7 @@
 use Proxy\Api\Api;
 require_once __DIR__ . '/lib/functions.php';
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/MFO/lib/acars_lifecycle.php';
+// FT-02 diagnostic mode: no lifecycle mutations.
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
@@ -29,9 +29,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         require __DIR__ . '/voy/secure_config/conn_voy.php';
         if (!isset($conn) || !($conn instanceof mysqli)) throw new RuntimeException('Connessione VOY assente');
 
-        $updated = mfo_reconcile_acars_lifecycle($conn, $pilotId, $bids, $acars);
-
-        echo json_encode(['utc'=>gmdate('c'),'acars_count'=>count($acars),'matches'=>$updated], JSON_UNESCAPED_SLASHES);
+        // Read-only snapshot. End Flight must not be inferred from BID disappearance.
+        $stmt = $conn->prepare("SELECT slot_id, activity_id, activity_leg_id, pilot_id, bid_id, actmp_id, pirep_id, status_mfo, status_flight, booked_at, completed_at FROM voy_mfo_slots WHERE pilot_id=? ORDER BY slot_id DESC LIMIT 30");
+        if (!$stmt) throw new RuntimeException('Query MFO FT-02 non disponibile');
+        $pilotKey = (string)$pilotId;
+        $stmt->bind_param('s', $pilotKey);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $slots = $result->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        $myBids = array_values(array_filter($bids, static fn($bid) => is_array($bid) && (int)($bid['pilotId'] ?? 0) === $pilotId));
+        $myAcars = array_values(array_filter($acars, static fn($flight) => is_array($flight) && (int)($flight['pilotId'] ?? 0) === $pilotId));
+        $histories = [];
+        foreach (array_unique(array_map('intval', array_column($slots, 'activity_id'))) as $activityId) {
+            if ($activityId < 1) continue;
+            try {
+                $h = Api::sendSync('GET', 'v1/activity/history/' . $activityId . '/' . $pilotId, null);
+                $body = (string)$h->getBody();
+                $decoded = json_decode($body, true);
+                $histories[(string)$activityId] = ['http'=>$h->getStatusCode(), 'data'=>json_last_error() === JSON_ERROR_NONE ? $decoded : ['invalid_json'=>true]];
+            } catch (Throwable $historyError) {
+                $histories[(string)$activityId] = ['error'=>'Richiesta storico non riuscita'];
+                error_log('[mfo_ft02] History '.$activityId.': '.$historyError->getMessage());
+            }
+        }
+        echo json_encode(['utc'=>gmdate('c'),'mode'=>'READ_ONLY','pilot_id'=>$pilotId,'slots'=>$slots,'bids'=>$myBids,'acars'=>$myAcars,'activity_history'=>$histories], JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
     } catch (Throwable $e) {
         error_log('[mfo_ft02] '.$e->getMessage());
         http_response_code(503); echo json_encode(['error'=>'Acquisizione FT-02 non riuscita; consultare error_log']);
@@ -39,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 ?><!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>MFO FT-02</title></head>
-<body><h2>MFO FT-02 · ACARS test</h2><p>Solo pilota 14240. Tenere aperta questa pagina durante il volo. Campionamento ogni secondo. Non è un monitor permanente.</p>
+<body><h2>MFO FT-02 · Diagnostica End Flight</h2><p>Solo pilota 14240. Diagnostica di sola lettura: BID, ACARS, storico Activity e slot MFO. Non modifica gli stati. Campionamento ogni 15 secondi; non è un servizio permanente.</p>
 <button id="toggle">Pausa</button><pre id="log"></pre>
 <script>
 const token=<?php echo json_encode($_SESSION['mfo_ft02_csrf']); ?>;
@@ -48,9 +70,9 @@ document.getElementById('toggle').onclick=()=>{running=!running;document.getElem
 async function poll(){
  if(!running||busy)return;busy=true;
  try{const body=new URLSearchParams({csrf:token});const r=await fetch(location.pathname,{method:'POST',credentials:'same-origin',body,cache:'no-store'});
- const data=await r.json();document.getElementById('log').textContent=JSON.stringify(data,null,2)+'\n'+document.getElementById('log').textContent.slice(0,9000);}
+ const data=await r.json();document.getElementById('log').textContent=JSON.stringify(data,null,2)+'\n'+document.getElementById('log').textContent.slice(0,18000);}
  catch(e){document.getElementById('log').textContent='ERRORE '+e.message+'\n'+document.getElementById('log').textContent;}
  finally{busy=false;}
 }
-poll();setInterval(poll,1000);
+poll();setInterval(poll,15000);
 </script></body></html>
