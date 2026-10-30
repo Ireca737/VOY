@@ -67,3 +67,8 @@ OSSERVAZIONI:
 - Il campo ACARS che collega univocamente il volo al BID non è ancora dimostrato.
 - Il comportamento dopo END FLIGHT e i tempi di pubblicazione del PIREP sono da misurare.
 - Il codice di `site_widgets/map_acars.php` deve essere acquisito e analizzato separatamente.
+
+
+## Nota successiva — baseline lifecycle v1.0.0
+
+Questo è il piano originario FT-01 e non descrive lo stato corrente del lifecycle MFO. Il completamento è stato successivamente validato tramite lo storico delle Activity VaBase, su apertura della CREW FLIGHT BOARD; né Disembarking né la scomparsa di BID/ACARS sono trigger produttivi. Vedere [BASELINE_LIFECYCLE_V1.md](BASELINE_LIFECYCLE_V1.md).
