@@ -11,29 +11,8 @@ function slot_e($value): string { return htmlspecialchars((string)($value ?? '')
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 if (!$id || $id < 1) { http_response_code(404); exit('Programma MFO non trovato'); }
 try {
-    // Reconcile only the authenticated pilot's active BIDs, never other pilots' slots.
-    $pilotId = (int)($_SESSION['pilotid'] ?? 0);
-    $activeBidIds = null;
-    if ($pilotId > 0) {
-        try {
-            $bidResponse = Api::sendSync('GET', 'v1/bids', null);
-            if ($bidResponse->getStatusCode() !== 200) throw new RuntimeException('BID API HTTP ' . $bidResponse->getStatusCode());
-            $bids = json_decode((string)$bidResponse->getBody(), true);
-            if (!is_array($bids) || !array_is_list($bids)) throw new RuntimeException('Formato BID non valido');
-            $activeBidIds = [];
-            foreach ($bids as $bid) {
-                if (!is_array($bid)) throw new RuntimeException('Record BID non valido');
-                if ((int)($bid['pilotId'] ?? 0) === $pilotId && (int)($bid['id'] ?? 0) > 0) {
-                    $activeBidIds[(int)$bid['id']] = true;
-                }
-            }
-        } catch (Throwable $bidError) {
-            error_log('[slot.php] Riconciliazione BID saltata: ' . $bidError->getMessage());
-            $activeBidIds = null; // Never release bookings when the API fails.
-        }
-    }
     // Keep VOY connection variables out of the VaBase page scope.
-    $slotRows = (static function (int $activityId, int $pilotId, ?array $activeBidIds): array {
+    $slotRows = (static function (int $activityId): array {
         require __DIR__ . '/voy/secure_config/conn_voy.php';
         if (!isset($conn) || !($conn instanceof mysqli)) throw new RuntimeException('Database VOY non disponibile');
         $check = $conn->prepare('SELECT id FROM voy_mfo_programs WHERE activity_id = ? LIMIT 1');
@@ -44,27 +23,6 @@ try {
         $found = $check->num_rows === 1;
         $check->close();
         if (!$found) { http_response_code(404); exit('Programma MFO non trovato'); }
-        if ($pilotId > 0 && $activeBidIds !== null) {
-            $booked = $conn->prepare("SELECT slot_id, bid_id FROM voy_mfo_slots WHERE activity_id=? AND pilot_id=? AND status_mfo='BOOKED' AND bid_id IS NOT NULL AND completed_at IS NULL");
-            if (!$booked) throw new RuntimeException('Controllo BID MFO non disponibile');
-            $booked->bind_param('ii', $activityId, $pilotId);
-            $booked->execute();
-            $booked->bind_result($slotId, $bidId);
-            $missing = [];
-            while ($booked->fetch()) {
-                if (!isset($activeBidIds[(int)$bidId])) $missing[] = [(int)$slotId, (int)$bidId];
-            }
-            $booked->close();
-            if ($missing) {
-                $release = $conn->prepare("UPDATE voy_mfo_slots SET status_mfo='AVAILABLE', pilot_id=NULL, callsign=NULL, bid_id=NULL, actmp_id=NULL, status_flight=NULL, booked_at=NULL WHERE slot_id=? AND activity_id=? AND pilot_id=? AND bid_id=? AND status_mfo='BOOKED' AND completed_at IS NULL");
-                if (!$release) throw new RuntimeException('Rilascio BID MFO non disponibile');
-                foreach ($missing as [$missingSlotId, $missingBidId]) {
-                    $release->bind_param('iiii', $missingSlotId, $activityId, $pilotId, $missingBidId);
-                    if (!$release->execute()) throw new RuntimeException('Rilascio BID MFO fallito');
-                }
-                $release->close();
-            }
-        }
         $stmt = $conn->prepare("SELECT s.activity_leg_id, s.callsign, s.status_mfo, s.status_flight, p.pilota_nome FROM voy_mfo_slots s LEFT JOIN voy_suite_piloti p ON p.pilot_id = s.pilot_id WHERE s.activity_id = ? AND s.status_mfo <> 'OBSOLETE'");
         if (!$stmt) throw new RuntimeException('Elenco slot non disponibile');
         $stmt->bind_param('i', $activityId);
@@ -74,7 +32,7 @@ try {
         while ($stmt->fetch()) $rows[(int)$legId] = ['callsign' => $callsign, 'pilot_name' => $pilotName, 'status_mfo' => $statusMfo, 'status_flight' => $statusFlight];
         $stmt->close();
         return $rows;
-    })($id, $pilotId, $activeBidIds);
+    })($id);
     $response = Api::sendSync('GET', 'v1/activity/' . $id, null);
     if ($response->getStatusCode() !== 200) throw new RuntimeException('Activity VaBase non disponibile');
     $activity = json_decode($response->getBody());
