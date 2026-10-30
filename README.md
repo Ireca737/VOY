@@ -45,6 +45,13 @@ Per il momento resta congelato. La direzione prevista è integrarne la produzion
 
 Documentazione: [VOY Tutorial](VOY_TUTORIAL/README.md)
 
+
+## 4. MFO — Monthly Flight Operations
+
+MFO gestisce programmi di volo con prenotazione esclusiva delle tratte VaBase. La baseline lifecycle verificata è `mfo-lifecycle-v1.0.0` (commit `a51babc`). Il completamento degli slot viene riconciliato con lo storico delle Activity VaBase all'apertura della Crew Flight Board; il monitor ACARS FT-02 resta sperimentale.
+
+Documentazione: [MFO](MFO/README.md) e [baseline lifecycle v1.0.0](MFO/docs/BASELINE_LIFECYCLE_V1.md).
+
 ## Istruzioni e riferimenti legacy
 
 Questi file restano il riferimento per le aree del sito che utilizzano ancora il RAW VaBase:
