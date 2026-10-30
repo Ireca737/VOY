@@ -64,3 +64,8 @@ La pagina calcola lato PHP distanza totale, distanza percorsa, distanza residua 
 - Risultati del test BID e dump della tabella `voy_mfo_slots` condivisi il 24/10/2026.
 
 Documento di riferimento per sviluppo e test, non sostituisce la verifica empirica degli endpoint e delle transizioni di stato.
+
+
+## Aggiornamento successivo — baseline lifecycle v1.0.0 (30/10/2026)
+
+La frase precedente secondo cui la fonte di completamento era ancora da individuare descrive lo stato del test iniziale, **non** lo stato attuale. È stato successivamente validato `GET v1/activity/history/{activityId}/{pilotId}`: `MFO/lib/activity_lifecycle.php` controlla `activityLegHistories[].activityLegId` e riconcilia lo slot BOOKED corrispondente a COMPLETED, al caricamento di `slot.php`. Il precedente HTTP 204 dello storico era un'osservazione puntuale, non un limite permanente dell'endpoint. La scomparsa del BID non libera una prenotazione confermata. `v1/map/acars` e `Disembarking` non sono trigger produttivi di completamento MFO. Vedere [baseline lifecycle](BASELINE_LIFECYCLE_V1.md).
