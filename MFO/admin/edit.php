@@ -47,6 +47,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 }
 $startValue=isset($a->startDate)?substr(str_replace(' ','T',$a->startDate),0,16):'';
 $endValue=!empty($a->endDate)?substr(str_replace(' ','T',$a->endDate),0,16):'';
+
+// Stato degli slot MFO: il collegamento Elimina è riservato agli AVAILABLE.
+$slotStates=[];
+$stmt=$conn->prepare('SELECT activity_leg_id, status_mfo FROM voy_mfo_slots WHERE activity_id=?');
+if (!$stmt) { http_response_code(500); exit('Registro slot MFO non disponibile'); }
+$stmt->bind_param('i',$id);
+if (!$stmt->execute()) { $stmt->close(); http_response_code(500); exit('Lettura stati MFO fallita'); }
+$stmt->bind_result($stateLegId,$stateMfo);
+while ($stmt->fetch()) { $slotStates[(int)$stateLegId]=$stateMfo; }
+$stmt->close();
+
 ?>
 <?php include __DIR__.'/../includes/nav.php'; include __DIR__.'/../includes/sidebar.php'; ?>
 <main><header class="page-header page-header-compact page-header-light border-bottom bg-white mb-4"><div class="container-fluid px-4"><div class="row align-items-center pt-3"><div class="col mb-3"><h1 class="page-header-title">Modifica MFO #<?= (int)$id ?></h1></div><div class="col-auto"><a href="index.php" class="btn btn-light">Programmi MFO</a></div></div></div></header>
@@ -65,7 +76,7 @@ $endValue=!empty($a->endDate)?substr(str_replace(' ','T',$a->endDate),0,16):'';
 <?php if($programOpen): ?><button class="btn btn-primary">Salva</button><?php else: ?><div class="alert alert-warning">Programma chiuso: modifiche disabilitate.</div><?php endif; ?></fieldset></form></div></div>
 <div class="card mb-4"><div class="card-header">Slot / tratte <?php if($programOpen): ?><a class="btn btn-sm btn-primary float-end" href="create_leg.php?id=<?=(int)$id?>">Nuova tratta</a><?php endif; ?></div>
 <div class="card-body"><table class="table table-bordered"><thead><tr><th>Leg ID</th><th>Partenza</th><th>Arrivo</th><th>Volo</th><th>Azioni</th></tr></thead><tbody>
-<?php foreach(($a->activityLegs??[]) as $leg): ?><tr><td><?= (int)$leg->id ?></td><td><?=mfo_e($leg->departureIcao??'')?></td><td><?=mfo_e($leg->arrivalIcao??'')?></td><td><?=mfo_e($leg->flightNumber??'')?></td><td><a href="edit_leg.php?leg_id=<?=(int)$leg->id?>">Modifica</a> <a class="text-danger ms-2" href="delete_leg.php?leg_id=<?=(int)$leg->id?>">Elimina</a></td></tr><?php endforeach; ?>
+<?php foreach(($a->activityLegs??[]) as $leg): ?><tr><td><?= (int)$leg->id ?></td><td><?=mfo_e($leg->departureIcao??'')?></td><td><?=mfo_e($leg->arrivalIcao??'')?></td><td><?=mfo_e($leg->flightNumber??'')?></td><td><a href="edit_leg.php?leg_id=<?=(int)$leg->id?>">Modifica</a><?php if($programOpen && ($slotStates[(int)$leg->id]??null)==='AVAILABLE'): ?> <a class="text-danger ms-2" href="delete_leg.php?leg_id=<?=(int)$leg->id?>">Elimina</a><?php endif; ?></td></tr><?php endforeach; ?>
 </tbody></table></div></div></div></main>
 <?php include __DIR__.'/../includes/footer.php'; ?>
 

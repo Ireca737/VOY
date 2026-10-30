@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['verify_clean_state'])) 
    if (!$legId || isset($remoteIds[$legId])) { $valid=false; break; }
    $remoteIds[$legId]=true;
   }
-  $check=$conn->prepare("SELECT activity_leg_id FROM voy_mfo_slots WHERE activity_id=? AND status_mfo<>'OBSOLETE'");
+  $check=$conn->prepare("SELECT activity_leg_id FROM voy_mfo_slots WHERE activity_id=?");
   if (!$valid || !$check) $error='Impossibile verificare tutte le tratte: blocco mantenuto';
   else {
    $check->bind_param('i',$id);
@@ -46,38 +46,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['verify_clean_state'])) 
    $check->close();
   }
  }
-} elseif ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reconcile_leg'])) {
- if (!mfo_verify()) $error='Token non valido';
- elseif (empty($_SESSION['mfo_leg_block_'.$id])) $error='Nessun blocco da riconciliare';
- else {
-  $reconciledLeg=filter_var($_POST['reconcile_leg'],FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
-  if (!$reconciledLeg) $error='Indicare un Leg ID valido';
-  else {
-   $check=$conn->prepare('SELECT slot_id FROM voy_mfo_slots WHERE activity_id=? AND activity_leg_id=? LIMIT 1');
-   if (!$check) $error='Impossibile verificare lo slot MFO';
-   else {
-    $check->bind_param('ii',$id,$reconciledLeg);
-    $check->execute(); $check->store_result(); $registered=$check->num_rows===1; $check->close();
-    if (!$registered) $error='Tratta non registrata per questo programma MFO: blocco mantenuto';
-    else {
-     try {
-      $remote=mfo_leg_activity($reconciledLeg);
-      if (!$remote) $error='Tratta non verificabile su VaBase: blocco mantenuto';
-      else {
-       // Accept common API casing when present; reject an explicit mismatch.
-       $remoteActivity=$remote->activityId ?? $remote->ActivityId ?? $remote->activity_id ?? null;
-       if ($remoteActivity!==null && (int)$remoteActivity!==$id) $error='La tratta VaBase appartiene a un altro programma';
-       else { unset($_SESSION['mfo_leg_block_'.$id]); header('Location: create_leg.php?id='.$id); exit; }
-      }
-     } catch (Throwable $e) { error_log('[MFO reconcile] activity='.$id.' leg='.$reconciledLeg.' exception='.get_class($e)); $error='Verifica VaBase non riuscita: blocco mantenuto'; }
-    }
-   }
-  }
- }
 } elseif ($_SERVER['REQUEST_METHOD']==='POST' && !mfo_program_is_open($conn,$id)) {
  http_response_code(409); exit('Programma MFO non OPEN: creazione tratta vietata');
 }
-if ($_SERVER['REQUEST_METHOD']==='POST') {
+if ($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['verify_clean_state'])) {
  if (!empty($_SESSION['mfo_leg_block_'.$id])) $error='Creazione bloccata: riconciliare prima la tratta VaBase';
  elseif (!mfo_verify()) $error='Token non valido';
  else {
@@ -159,8 +131,8 @@ $blocked=!empty($_SESSION['mfo_leg_block_'.$id]);
 <main><header class="page-header page-header-compact page-header-light border-bottom bg-white mb-4"><div class="container-fluid px-4"><div class="row pt-3"><div class="col mb-3"><h1 class="page-header-title">Nuova tratta MFO #<?=(int)$id?></h1></div><div class="col-auto"><a class="btn btn-light" href="edit.php?id=<?=(int)$id?>">Torna al programma</a></div></div></div></header>
 <div class="container-fluid px-4">
 <?php if($error): ?><div class="alert alert-danger"><?=mfo_e($error)?></div><?php endif; ?>
-<?php if($blocked): ?><div class="alert alert-warning">Creazione bloccata dopo una risposta VaBase non riconciliata. Se la tratta e gia registrata in VOY e presente su VaBase, verifica il suo ID per sbloccare la creazione.</div>
-<form method="post" class="card card-body mb-3"><input type="hidden" name="csrf_token" value="<?=mfo_e(mfo_token())?>"><button type="submit" name="verify_clean_state" value="1" class="btn btn-outline-primary">Verifica corrispondenza VaBase / MFO e sblocca</button></form>\n<form method="post" class="card card-body mb-4"><input type="hidden" name="csrf_token" value="<?=mfo_e(mfo_token())?>"><label for="reconcile_leg" class="form-label">Leg ID gia riconciliato</label><input id="reconcile_leg" class="form-control mb-3" type="number" min="1" name="reconcile_leg" required><button type="submit" class="btn btn-outline-primary">Verifica e sblocca</button></form><?php else: ?>
+<?php if($blocked): ?><div class="alert alert-warning">Creazione bloccata dopo una risposta VaBase non riconciliata. Verificare la corrispondenza completa dei Leg ID fra VaBase e MFO prima di sbloccare la creazione.</div>
+<form method="post" class="card card-body mb-3"><input type="hidden" name="csrf_token" value="<?=mfo_e(mfo_token())?>"><button type="submit" name="verify_clean_state" value="1" class="btn btn-outline-primary">Verifica corrispondenza VaBase / MFO e sblocca</button></form><?php else: ?>
 <div class="card mb-4"><div class="card-body"><form method="post"><input type="hidden" name="csrf_token" value="<?=mfo_e(mfo_token())?>">
 <div class="row"><div class="col-md-6 mb-3"><label>Partenza ICAO</label><input class="form-control" name="departure" maxlength="4" required></div><div class="col-md-6 mb-3"><label>Arrivo ICAO</label><input class="form-control" name="arrival" maxlength="4" required></div></div>
 <div class="row"><div class="col-md-6 mb-3"><label>Numero volo</label><input class="form-control" name="flightNumber"></div><div class="col-md-6 mb-3"><label>Aeromobile ICAO</label><input class="form-control" name="aircraft"></div></div>
