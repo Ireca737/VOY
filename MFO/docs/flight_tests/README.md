@@ -207,3 +207,8 @@ Registro `voy-ft01-events-1792924210250.json` allegato alla conversazione, monit
 - Comparsa del PIREP e semantica di END FLIGHT.
 - Effetti della riconciliazione `slot.php` quando il BID non è più attivo.
 - Analisi di `site_widgets/map_acars.php` quando disponibile.
+
+
+## Nota successiva — baseline MFO v1.0.0 (30/10/2026)
+
+Questo diario conserva fedelmente le osservazioni del primo test FT-01. Le diciture storiche «in corso» e «da verificare» non descrivono più lo stato del lifecycle produttivo. I successivi collaudi VY1102, VY1103 e VY1104 hanno validato la persistenza di BOOKED e il completamento mediante lo storico delle Activity VaBase, all'apertura della CREW FLIGHT BOARD, senza trigger ACARS o rilascio per scomparsa del BID. Vedere [BASELINE_LIFECYCLE_V1.md](../BASELINE_LIFECYCLE_V1.md).
