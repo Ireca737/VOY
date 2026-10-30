@@ -1,9 +1,9 @@
-# Vetrina MFO
+# Vetrina e prenotazioni MFO
 
-Destinazione prevista: `/mfo/`.
+Le pagine operative sono nella radice web: `slots.php` (programmi), `slot.php` (CREW FLIGHT BOARD), `slot_leg.php` (prenotazione esclusiva).
 
-Mostra esclusivamente le Activity associate a `voy_mfo_programs`, potenzialmente più programmi contemporanei. Ogni programma espone le Activity Legs come slot con stato AVAILABLE, BOOKED, COMPLETED (ed eventuali stati intermedi da definire).
+La bacheca mostra AVAILABLE, BOOKED e COMPLETED e riconcilia gli slot BOOKED con lo storico delle Activity VaBase al caricamento. La scomparsa del BID non libera una prenotazione confermata.
 
-Prenotazione attraverso endpoint controllato MFO: verifica esclusiva atomica in VOY, creazione BID VaBase e trattamento degli errori senza lasciare slot bloccati.
+Questa cartella `MFO/public/` contiene invece componenti accessori, inclusi endpoint di settlement/cron non abilitati dalla baseline lifecycle v1.0.0. Non attivarli in produzione senza collaudo e autorizzazione separati.
 
-**Non pubblicare ancora:** da verificare prima l'esclusione e il reindirizzamento delle pagine native Activity.
+La compartimentazione completa rispetto alle pagine native Activity rimane da verificare. Vedere [baseline](../docs/BASELINE_LIFECYCLE_V1.md).
