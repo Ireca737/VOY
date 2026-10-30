@@ -1,31 +1,26 @@
-# Architettura e vincoli MFO
+# Architettura e vincoli MFO — baseline lifecycle v1.0.0
 
 ## Riuso VaBase
-- Activity: programma, titolo, descrizione, banner, validità e attivazione.
-- Activity Legs: rotte indipendenti (LegsInOrder=false).
-- BID, ACARS, PIREP e storico: sistema operativo esistente.
-- MFO: riconoscimento del programma, slot one-shot, prenotazione esclusiva, bonus XP.
 
-## Compartimentazione
-L'Activity MFO usa `Type=Event` solo come valore tecnico API; non deve essere presentata nella vetrina Tours & Events. Accessi diretti alle pagine Activity devono rinviare alla sezione MFO e nessun percorso di creazione BID deve aggirare il controllo esclusivo. Questo requisito richiederà interventi mirati alle pagine del sito e verifica degli endpoint raggiungibili: non è ancora implementato.
+Le Activity VaBase gestiscono programma e tratte (`Type=Event` tecnico, `LegsInOrder=false`); VaBase continua a gestire BID, ACARS, PIREP e storico. MFO registra i programmi in `voy_mfo_programs` e le prenotazioni esclusive in `voy_mfo_slots` senza modifiche al core VaBase.
 
-## Lifecycle consolidato
-`AVAILABLE → BOOKED → COMPLETED` è il ciclo persistente dello slot MFO; `status_flight` e `actmp_id` descrivono separatamente l'evoluzione ACARS live.
+## Lifecycle produttivo
 
-Regole validate con i flight test del 25/10/2026:
-- il BOOK atomico assegna lo slot e collega il BID VaBase;
-- una cancellazione del BID prima del completamento libera lo slot e lo riporta ad `AVAILABLE`;
-- durante ACARS vengono memorizzati `actmp_id` e `status_flight`;
-- sul medesimo tentativo ACARS, `statStage=Disembarking` chiude definitivamente lo slot con `status_mfo='COMPLETED'` e `completed_at` UTC;
-- uno slot `COMPLETED` non viene riaperto quando BID o ACARS scompaiono.
+- `AVAILABLE`: tratta prenotabile mediante `slot_leg.php` con assegnazione atomica e BID VaBase.
+- `BOOKED`: prenotazione confermata e persistente. La cancellazione o scomparsa del BID **non** riporta lo slot ad AVAILABLE.
+- `COMPLETED`: all'apertura di `slot.php`, `MFO/lib/activity_lifecycle.php` interroga `GET v1/activity/history/{activityId}/{pilotId}` e verifica `activityLegHistories[].activityLegId`. L'UPDATE condizionato sullo stesso programma, pilota e Leg registra `completed_at=UTC_TIMESTAMP()` mantenendo l'assegnazione.
+- `OBSOLETE`: slot escluso dalla bacheca.
 
-La chiusura è idempotente e vincolata a `activity_leg_id`, `pilot_id`, `bid_id` e allo stesso `actmp_id`. La semplice scomparsa da `v1/bids` o `v1/map/acars` non viene usata come evento di completamento. La logica consolidata è in `MFO/lib/acars_lifecycle.php`; `mfo_ft02.php` resta un harness di test/polling e non un daemon di produzione.
+La riconciliazione è idempotente e avviene su richiesta, non tramite cron o polling. In caso di storico non disponibile lo slot rimane BOOKED fino a una visita successiva. Il timestamp `completed_at` è quello della riconciliazione, non necessariamente del volo.
 
-## Integrità
-Il vincolo UNIQUE su `activity_leg_id` evita duplicati dello stesso slot, ma non basta a garantire la prenotazione concorrente: usare operazioni atomiche, controllo del numero di righe aggiornate e gestione di eventuali errori tra DB VOY e API VaBase.
+## ACARS sperimentale
 
-## Bonus XP
-Regola concordata: bonus per leg completata pari a `floor(distanza VaBase in NM / 10)`, aggiuntivo rispetto agli XP nativi, da verificare rispetto alla funzione distanza e al wallet effettivamente disponibili. Obbligatoria idempotenza per evitare doppi accrediti.
+`MFO/lib/acars_lifecycle.php` e `mfo_ft02.php` appartengono ai test FT-02 e **non** costituiscono il lifecycle produttivo. `Disembarking` e la scomparsa di ACARS/BID non provano il completamento.
 
-## Sicurezza e distribuzione
-Non modificare il core/API VaBase senza necessità dimostrata. Nessuna modifica al sito in produzione durante lo sviluppo; verificare i permessi amministrativi, CSRF, API e controlli di input prima di un rilascio.
+## Integrità e attività aperte
+
+Il vincolo UNIQUE su `activity_leg_id` non sostituisce le transazioni e i controlli sulle righe aggiornate. Restano da validare sistematicamente concorrenza, recupero da errori DB/API, autorizzazioni, CSRF e tutti i percorsi alternativi delle pagine Activity native. La compartimentazione completa rispetto a Tours & Events non è ancora garantita.
+
+Bonus XP e Cash sono sviluppi separati: il bonus previsto usa la distanza VaBase `get_distance()` con `floor(NM/10)` e accredito idempotente da collaudare. Non abilitare il cron di settlement sulla base della sola presenza dei file.
+
+Riferimento: [BASELINE_LIFECYCLE_V1.md](BASELINE_LIFECYCLE_V1.md).
