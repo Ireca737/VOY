@@ -11,7 +11,7 @@ if (!userHasPermission(11)) { header('Location: '.website_base_url.'admin/access
 // Other writes remain disabled.
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $script = basename((string)($_SERVER['SCRIPT_FILENAME'] ?? ''));
-if (!in_array($method, ['GET', 'HEAD'], true) && !($method === 'POST' && in_array($script, ['create_leg.php', 'edit.php', 'edit_leg.php', 'delete_leg.php'], true))) {
+if (!in_array($method, ['GET', 'HEAD'], true) && !($method === 'POST' && in_array($script, ['create_leg.php', 'edit.php', 'edit_leg.php', 'delete_leg.php', 'repropose.php'], true))) {
     http_response_code(403);
     exit('MFO in collaudo: scritture disabilitate');
 }
