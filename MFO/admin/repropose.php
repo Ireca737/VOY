@@ -64,9 +64,15 @@ try {
     $source = mfo_repropose_activity($id);
     $legs = mfo_repropose_ids($source);
     $slots = mfo_repropose_slots($conn, $id);
-    // Fail closed: no unregistered VaBase legs and no orphan local slots.
-    if (array_diff_key($legs, $slots) || array_diff_key($slots, $legs)) {
-        throw new RuntimeException('Le tratte VaBase e gli slot MFO originali non coincidono');
+    // Every current VaBase Leg must have an MFO slot. Historical OBSOLETE
+    // slots may legitimately remain in MFO after their VaBase Leg was deleted.
+    if (array_diff_key($legs, $slots)) {
+        throw new RuntimeException('Esistono tratte VaBase prive di slot MFO');
+    }
+    foreach ($slots as $legId => $status) {
+        if (!isset($legs[$legId]) && $status !== 'OBSOLETE') {
+            throw new RuntimeException('Slot MFO non obsoleto privo di tratta VaBase: Leg #' . $legId);
+        }
     }
     foreach ($legs as $legId => $leg) {
         if ($slots[$legId] !== 'OBSOLETE') $selected[$legId] = $leg;
