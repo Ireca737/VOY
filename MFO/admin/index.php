@@ -111,7 +111,14 @@ function mfoEsc($value): string
                                         <td><?php echo $activity ? mfoEsc($activity['type'] ?? '') : '—'; ?></td>
                                         <td><?php echo $activity ? (filter_var($activity['active'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'Sì' : 'No') : '—'; ?></td>
                                         <td><?php echo $activity ? mfoEsc($activity['endDate'] ?? 'Nessuna scadenza') : '—'; ?></td>
-                                        <td><a class="btn btn-sm btn-outline-primary" href="edit.php?id=<?php echo (int) $program['activity_id']; ?>">Gestisci programma e tratte</a></td>
+                                        <td>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <a class="btn btn-sm btn-outline-primary" href="edit.php?id=<?php echo (int) $program['activity_id']; ?>">Gestisci programma e tratte</a>
+                                                <?php if ($activity): ?>
+                                                    <a class="btn btn-sm btn-outline-secondary" href="repropose.php?id=<?php echo (int) $program['activity_id']; ?>" title="Ripropone il programma in una nuova Activity non attiva">Riproponi slot</a>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
