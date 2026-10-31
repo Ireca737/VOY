@@ -33,4 +33,4 @@
 - Il tag `mfo-lifecycle-v1.0.0` resta immutato; nessuna modifica automatica al server di produzione.
 
 ## Stato
-Specifica funzionale concordata. L'implementazione e il collaudo del plugin sono attività successive.
+Prima implementazione presente nel branch: `MFO/admin/repropose.php`, pulsante in `MFO/admin/index.php` e autorizzazione POST in `_common.php`. **Da sottoporre a verifica tecnica e collaudo prima del deploy**. La gestione dei blocchi è basata sulla sessione PHP: in caso di perdita della sessione o timeout, non ripetere la richiesta senza riconciliazione manuale. Nessuna ripresa automatica.
