@@ -12,7 +12,8 @@ $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 if (!$id || $id < 1) { http_response_code(404); exit('Programma MFO non trovato'); }
 try {
     // Keep VOY connection variables out of the VaBase page scope.
-    $slotRows = (static function (int $activityId): array {
+    $pilotId = (int)($_SESSION['pilotid'] ?? 0);
+    $slotRows = (static function (int $activityId, int $pilotId): array {
         require __DIR__ . '/voy/secure_config/conn_voy.php';
         if (!isset($conn) || !($conn instanceof mysqli)) throw new RuntimeException('Database VOY non disponibile');
         $check = $conn->prepare('SELECT id FROM voy_mfo_programs WHERE activity_id = ? LIMIT 1');
@@ -24,7 +25,11 @@ try {
         $check->close();
         if (!$found) { http_response_code(404); exit('Programma MFO non trovato'); }
         require_once __DIR__ . '/MFO/lib/activity_lifecycle.php';
-        mfo_reconcile_activity_history($conn, $activityId);
+        $historyResult = mfo_reconcile_activity_history($conn, $activityId);
+        // Do not release an absent BID if completion history could not be checked.
+        if ($pilotId > 0 && $historyResult['api_errors'] === 0) {
+            mfo_reconcile_cancelled_bids($conn, $activityId, $pilotId);
+        }
         $stmt = $conn->prepare("SELECT s.activity_leg_id, s.callsign, s.status_mfo, s.status_flight, p.pilota_nome FROM voy_mfo_slots s LEFT JOIN voy_suite_piloti p ON p.pilot_id = s.pilot_id WHERE s.activity_id = ? AND s.status_mfo <> 'OBSOLETE'");
         if (!$stmt) throw new RuntimeException('Elenco slot non disponibile');
         $stmt->bind_param('i', $activityId);
@@ -34,7 +39,7 @@ try {
         while ($stmt->fetch()) $rows[(int)$legId] = ['callsign' => $callsign, 'pilot_name' => $pilotName, 'status_mfo' => $statusMfo, 'status_flight' => $statusFlight];
         $stmt->close();
         return $rows;
-    })($id);
+    })($id, $pilotId);
     $response = Api::sendSync('GET', 'v1/activity/' . $id, null);
     if ($response->getStatusCode() !== 200) throw new RuntimeException('Activity VaBase non disponibile');
     $activity = json_decode($response->getBody());
